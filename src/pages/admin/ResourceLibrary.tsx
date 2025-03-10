@@ -1,0 +1,90 @@
+import React, { useState } from 'react';
+import AdminLayout from '../../components/admin/AdminLayout';
+import ResourceFilters from '../../components/admin/resources/ResourceFilters';
+import ResourceGrid from '../../components/admin/resources/ResourceGrid';
+import ResourceTable from '../../components/admin/resources/ResourceTable';
+import ResourceActionPanel from '../../components/admin/resources/ResourceActionPanel';
+import { ViewIcon, GridIcon } from 'lucide-react';
+
+interface ResourceLibraryProps {
+  isDarkMode: boolean;
+  onThemeToggle: () => void;
+}
+
+export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceLibraryProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClass, setSelectedClass] = useState('all');
+  const [selectedSubject, setSelectedSubject] = useState('all');
+  const [selectedBook, setSelectedBook] = useState('all');
+  const [selectedChapter, setSelectedChapter] = useState('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+
+  return (
+    <AdminLayout isDarkMode={isDarkMode} onThemeToggle={onThemeToggle}>
+      <div className="space-y-6">
+        <div className="sm:flex sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+            Resource Library
+          </h1>
+          <ResourceActionPanel />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <ResourceFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            selectedClass={selectedClass}
+            onClassChange={setSelectedClass}
+            selectedSubject={selectedSubject}
+            onSubjectChange={setSelectedSubject}
+            selectedBook={selectedBook}
+            onBookChange={setSelectedBook}
+            selectedChapter={selectedChapter}
+            onChapterChange={setSelectedChapter}
+          />
+          
+          <div className="flex items-center space-x-2 ml-4">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-md ${
+                viewMode === 'grid'
+                  ? 'bg-gray-100 dark:bg-gray-700 text-primary-600 dark:text-primary-400'
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              <GridIcon className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-2 rounded-md ${
+                viewMode === 'table'
+                  ? 'bg-gray-100 dark:bg-gray-700 text-primary-600 dark:text-primary-400'
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              <ViewIcon className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {viewMode === 'grid' ? (
+          <ResourceGrid
+            searchQuery={searchQuery}
+            selectedClass={selectedClass}
+            selectedSubject={selectedSubject}
+            selectedBook={selectedBook}
+            selectedChapter={selectedChapter}
+          />
+        ) : (
+          <ResourceTable
+            searchQuery={searchQuery}
+            selectedClass={selectedClass}
+            selectedSubject={selectedSubject}
+            selectedBook={selectedBook}
+            selectedChapter={selectedChapter}
+          />
+        )}
+      </div>
+    </AdminLayout>
+  );
+}
