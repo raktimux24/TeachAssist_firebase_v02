@@ -8,69 +8,45 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-// Path to .env file
+// Path to .env and env.example files
 const envPath = path.join(__dirname, '.env');
+const envExamplePath = path.join(__dirname, 'env.example');
 
-// Check if .env file exists
+// Check if files exist
 const envExists = fs.existsSync(envPath);
+const envExampleExists = fs.existsSync(envExamplePath);
 
-// Function to update .env file
-const updateEnvFile = (apiKey) => {
+// Function to create .env file from env.example
+const createEnvFile = () => {
   try {
-    let envContent = '';
-    
-    if (envExists) {
-      // Read existing .env file
-      envContent = fs.readFileSync(envPath, 'utf8');
-      
-      // Check if VITE_OPENAI_API_KEY already exists
-      if (envContent.includes('VITE_OPENAI_API_KEY=')) {
-        // Replace existing key
-        envContent = envContent.replace(
-          /VITE_OPENAI_API_KEY=.*/,
-          `VITE_OPENAI_API_KEY=${apiKey}`
-        );
-      } else {
-        // Add new key
-        envContent += `\n# OpenAI API Key\nVITE_OPENAI_API_KEY=${apiKey}\n`;
-      }
-    } else {
-      // Create new .env file with OpenAI API key
-      envContent = `# Environment Variables\n\n# OpenAI API Key\nVITE_OPENAI_API_KEY=${apiKey}\n`;
+    if (!envExampleExists) {
+      console.error('Error: env.example file not found. Cannot create .env file.');
+      rl.close();
+      return;
     }
+
+    // Read env.example content
+    const envExampleContent = fs.readFileSync(envExamplePath, 'utf8');
     
     // Write to .env file
-    fs.writeFileSync(envPath, envContent);
-    console.log('\nOpenAI API key has been added to .env file successfully!');
+    fs.writeFileSync(envPath, envExampleContent);
+    
+    console.log('\n.env file has been created successfully from env.example!');
+    console.log('Please edit the .env file and add your actual API keys and configuration values.');
+    rl.close();
   } catch (error) {
-    console.error('Error updating .env file:', error);
+    console.error('Error creating .env file:', error);
+    rl.close();
   }
 };
 
-console.log('This script will add the OpenAI API key to your .env file.');
+console.log('Checking environment setup...');
 
-// Prompt user for API key
-rl.question('Please enter your OpenAI API key: ', (apiKey) => {
-  if (!apiKey || apiKey.trim() === '') {
-    console.log('Error: API key cannot be empty.');
-    rl.close();
-    return;
-  }
-  
-  if (envExists) {
-    console.log('\nAn .env file already exists. Do you want to update it? (y/n)');
-    rl.question('> ', (answer) => {
-      if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
-        updateEnvFile(apiKey);
-        rl.close();
-      } else {
-        console.log('Operation cancelled.');
-        rl.close();
-      }
-    });
-  } else {
-    console.log('\nNo .env file found. Creating a new one...');
-    updateEnvFile(apiKey);
-    rl.close();
-  }
-});
+if (envExists) {
+  console.log('\nAn .env file already exists. No changes were made.');
+  console.log('If you need to update your environment variables, please edit the .env file directly.');
+  rl.close();
+} else {
+  console.log('\nNo .env file found. Creating one from env.example...');
+  createEnvFile();
+}
