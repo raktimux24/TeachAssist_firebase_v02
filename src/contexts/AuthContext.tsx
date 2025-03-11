@@ -13,6 +13,8 @@ import { auth, db } from '../firebase/config';
 
 export interface UserInfo extends UserData {
   uid: string;
+  photoURL?: string;
+  darkMode?: boolean;
   createdAt?: any;
   updatedAt?: any;
 }
@@ -174,6 +176,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (userData.role) {
           userData.role = userData.role.toLowerCase();
         }
+        
+        // Add photoURL from Firebase Auth user if available
+        if (user.photoURL && !userData.photoURL) {
+          userData.photoURL = user.photoURL;
+          // Update the Firestore document with the photoURL
+          await setDoc(userDocRef, { photoURL: user.photoURL, updatedAt: serverTimestamp() }, { merge: true });
+        }
+        
         setUserInfo(userData);
       } else {
         // If user document doesn't exist, create it with default values
@@ -186,6 +196,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           email: user.email || '',
           role: 'admin', // Default to admin for safety if we can't determine the role
           organization: 'Default Organization',
+          photoURL: user.photoURL || undefined,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         };

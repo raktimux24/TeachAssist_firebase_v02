@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
+import { useAuth } from '../../../contexts/AuthContext';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../../firebase/config';
 
 interface ThemeSettingsProps {
   isDarkMode: boolean;
@@ -7,6 +10,34 @@ interface ThemeSettingsProps {
 }
 
 export default function ThemeSettings({ isDarkMode, onThemeToggle }: ThemeSettingsProps) {
+  const { userInfo } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleThemeToggle = async () => {
+    // Toggle the theme first for immediate UI feedback
+    onThemeToggle();
+    
+    // Save the theme preference to Firestore if user is authenticated
+    if (userInfo?.uid) {
+      try {
+        setIsSaving(true);
+        const userDocRef = doc(db, 'users', userInfo.uid);
+        
+        // Save the opposite of current isDarkMode since we already toggled it
+        await updateDoc(userDocRef, {
+          darkMode: !isDarkMode,
+          updatedAt: serverTimestamp()
+        });
+        
+        console.log('Theme preference saved to Firestore');
+      } catch (error) {
+        console.error('Error saving theme preference:', error);
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -35,11 +66,13 @@ export default function ThemeSettings({ isDarkMode, onThemeToggle }: ThemeSettin
               type="button"
               role="switch"
               aria-checked={isDarkMode}
-              onClick={onThemeToggle}
+              onClick={handleThemeToggle}
+              disabled={isSaving}
               className={`
                 relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent
                 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500
                 ${isDarkMode ? 'bg-primary-600' : 'bg-gray-200'}
+                ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}
               `}
             >
               <span

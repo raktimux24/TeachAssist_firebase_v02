@@ -68,16 +68,30 @@ const LandingPage = ({ isDarkMode, onThemeToggle }: { isDarkMode: boolean; onThe
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const { userInfo } = useAuth();
 
-  // Load theme preference from localStorage if available
+  // Load theme preference from Firestore if user is authenticated, otherwise from localStorage
   useEffect(() => {
+    // If user is authenticated, check for their theme preference in Firestore
+    if (userInfo?.uid) {
+      console.log('[App] User authenticated, checking for theme preference in Firestore');
+      const userDarkMode = userInfo.darkMode;
+      
+      if (userDarkMode !== undefined) {
+        console.log('[App] Loading dark mode from Firestore:', userDarkMode);
+        setIsDarkMode(userDarkMode);
+        return;
+      }
+    }
+    
+    // Fallback to localStorage if no user is authenticated or no preference in Firestore
     const savedTheme = localStorage.getItem('darkMode');
     if (savedTheme) {
       const darkModeValue = savedTheme === 'true';
       console.log('[App] Loading dark mode from localStorage:', darkModeValue);
       setIsDarkMode(darkModeValue);
     }
-  }, []);
+  }, [userInfo]);
 
   useEffect(() => {
     console.log('[App] Dark mode changed:', isDarkMode);
@@ -169,12 +183,12 @@ function App() {
           
           {/* Error route - display a 404 page */}
           <Route path="/404" element={
-            <div className="flex flex-col items-center justify-center min-h-screen bg-white dark:bg-gray-900 p-4">
-              <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-4">404 - Page Not Found</h1>
-              <p className="text-gray-600 dark:text-gray-300 mb-8">The page you are looking for doesn't exist or has been moved.</p>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-white dark:bg-gray-900 px-4 text-center">
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">404 - Page Not Found</h1>
+              <p className="text-gray-600 dark:text-gray-400 mb-8">The page you are looking for doesn't exist or has been moved.</p>
               <button 
-                onClick={() => window.history.back()}
-                className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors"
+                onClick={() => window.history.back()} 
+                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
               >
                 Go Back
               </button>

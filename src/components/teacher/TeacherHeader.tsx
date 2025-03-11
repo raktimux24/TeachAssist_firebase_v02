@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { User, LogOut, Settings, ChevronDown, Menu, Sun, Moon } from 'lucide-react';
+import { User as UserIcon, LogOut, Settings, ChevronDown, Menu, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
@@ -15,6 +15,7 @@ export default function TeacherHeader({ onMenuClick, isDarkMode, onThemeToggle }
   const location = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { logout, userInfo } = useAuth();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -28,8 +29,6 @@ export default function TeacherHeader({ onMenuClick, isDarkMode, onThemeToggle }
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  const { logout } = useAuth();
 
   const handleSignOut = async () => {
     try {
@@ -86,10 +85,18 @@ export default function TeacherHeader({ onMenuClick, isDarkMode, onThemeToggle }
                 aria-expanded={isDropdownOpen}
                 aria-haspopup="true"
               >
-                <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                  <User className="h-5 w-5" />
+                <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                  {userInfo?.photoURL ? (
+                    <img 
+                      src={userInfo.photoURL} 
+                      alt={userInfo.fullName || 'User'} 
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <UserIcon className="h-5 w-5" />
+                  )}
                 </div>
-                <span className="hidden sm:inline">John Smith</span>
+                <span className="hidden sm:inline">{userInfo?.fullName || 'Teacher'}</span>
                 <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
               </button>
 
