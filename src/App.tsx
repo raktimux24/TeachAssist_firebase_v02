@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AdminRoute, TeacherRoute, StudentRoute, PublicRoute } from './components/ProtectedRoutes';
+import { useAuth } from './contexts/AuthContext';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Features from './components/Features';
@@ -38,6 +40,22 @@ import TeacherDashboard from './pages/teacher/Dashboard';
 import StudentDashboard from './pages/student/Dashboard';
 import StudentSettings from './pages/student/Settings';
 
+// Component to redirect users based on their role
+const RoleBasedRedirect = () => {
+  const { userInfo } = useAuth();
+  
+  if (userInfo?.role === 'admin') {
+    return <Navigate to="/admin" replace />;
+  } else if (userInfo?.role === 'teacher') {
+    return <Navigate to="/teacher" replace />;
+  } else if (userInfo?.role === 'student') {
+    return <Navigate to="/student" replace />;
+  }
+  
+  // Default fallback
+  return <Navigate to="/" replace />;
+};
+
 const LandingPage = ({ isDarkMode, onThemeToggle }: { isDarkMode: boolean; onThemeToggle: () => void }) => (
   <>
     <Header isDarkMode={isDarkMode} onThemeToggle={onThemeToggle} />
@@ -51,60 +69,112 @@ const LandingPage = ({ isDarkMode, onThemeToggle }: { isDarkMode: boolean; onThe
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+  // Load theme preference from localStorage if available
   useEffect(() => {
+    const savedTheme = localStorage.getItem('darkMode');
+    if (savedTheme) {
+      setIsDarkMode(savedTheme === 'true');
+    }
+  }, []);
+
+  useEffect(() => {
+    // Apply dark mode class to document
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
+    
+    // Save theme preference to localStorage
+    localStorage.setItem('darkMode', isDarkMode.toString());
   }, [isDarkMode]);
+  
+  // Function to toggle theme with proper state management
+  const handleThemeToggle = () => {
+    setIsDarkMode(prevMode => !prevMode);
+  };
 
   return (
     <Router>
       <div className="min-h-screen bg-white dark:bg-gray-900">
         <Routes>
-          <Route 
-            path="/" 
-            element={
-              <LandingPage 
-                isDarkMode={isDarkMode} 
-                onThemeToggle={() => setIsDarkMode(!isDarkMode)} 
-              />
-            } 
-          />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/admin" element={<AdminDashboard isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/admin/users" element={<UserManagement isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/admin/users/add" element={<AddUser isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/admin/users/bulk-upload" element={<BulkUserUpload isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/admin/resources" element={<ResourceLibrary isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/admin/logs" element={<ActivityLogs isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/admin/settings" element={<AdminSettings isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/admin/resources/upload" element={<UploadResources isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} isAdmin={true} />} />
-          <Route path="/teacher" element={<TeacherDashboard isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/lessons" element={<LessonPlansList isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/resources" element={<MyResources isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/resources/upload" element={<UploadResources isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/settings" element={<TeacherSettings isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/content" element={<ContentGeneration isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/content/notes" element={<GenerateNotes isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/content/lesson-plans" element={<GenerateLessonPlans isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/content/presentations" element={<GeneratePresentations isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/content/question-sets" element={<GenerateQuestionSets isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/content/flashcards" element={<GenerateFlashcards isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/content/question-sets/results" element={<QuestionSetResults isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/content/flashcards/results" element={<FlashcardsResults isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/content/lesson-plans/results" element={<LessonPlanResults isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/content/notes/results" element={<ClassNotesResults isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/teacher/content/presentations/results" element={<PresentationsResults isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/student/study-plan" element={<StudyPlan isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/student/tutoring" element={<AITutoring isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/student/quizzes" element={<QuizSimulation isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/student/quiz-results" element={<QuizResults isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/student" element={<StudentDashboard isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
-          <Route path="/student/settings" element={<StudentSettings isDarkMode={isDarkMode} onThemeToggle={() => setIsDarkMode(!isDarkMode)} />} />
+          {/* Public Routes - accessible without authentication */}
+          <Route element={<PublicRoute />}>
+            <Route 
+              path="/" 
+              element={
+                <LandingPage 
+                  isDarkMode={isDarkMode} 
+                  onThemeToggle={handleThemeToggle} 
+                />
+              } 
+            />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+          </Route>
+
+          {/* Admin Routes - only accessible by admin users */}
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AdminDashboard isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/admin/users" element={<UserManagement isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/admin/users/add" element={<AddUser isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/admin/users/bulk-upload" element={<BulkUserUpload isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/admin/resources" element={<ResourceLibrary isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/admin/logs" element={<ActivityLogs isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/admin/settings" element={<AdminSettings isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/admin/resources/upload" element={<UploadResources isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} isAdmin={true} />} />
+          </Route>
+
+          {/* Teacher Routes - only accessible by teacher users */}
+          <Route element={<TeacherRoute />}>
+            <Route path="/teacher" element={<TeacherDashboard isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/lessons" element={<LessonPlansList isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/resources" element={<MyResources isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/resources/upload" element={<UploadResources isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/settings" element={<TeacherSettings isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content" element={<ContentGeneration isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/notes" element={<GenerateNotes isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/lesson-plans" element={<GenerateLessonPlans isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/presentations" element={<GeneratePresentations isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/question-sets" element={<GenerateQuestionSets isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/flashcards" element={<GenerateFlashcards isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/question-sets/results" element={<QuestionSetResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/flashcards/results" element={<FlashcardsResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/lesson-plans/results" element={<LessonPlanResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/notes/results" element={<ClassNotesResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/presentations/results" element={<PresentationsResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+          </Route>
+
+          {/* Student Routes - only accessible by student users */}
+          <Route element={<StudentRoute />}>
+            <Route path="/student" element={<StudentDashboard isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/student/study-plan" element={<StudyPlan isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/student/tutoring" element={<AITutoring isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/student/quizzes" element={<QuizSimulation isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/student/quiz-results" element={<QuizResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/student/settings" element={<StudentSettings isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+          </Route>
+          
+          {/* Error route - display a 404 page */}
+          <Route path="/404" element={
+            <div className="flex flex-col items-center justify-center min-h-screen bg-white dark:bg-gray-900 p-4">
+              <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-4">404 - Page Not Found</h1>
+              <p className="text-gray-600 dark:text-gray-300 mb-8">The page you are looking for doesn't exist or has been moved.</p>
+              <button 
+                onClick={() => window.history.back()}
+                className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors"
+              >
+                Go Back
+              </button>
+            </div>
+          } />
+          
+          {/* Role-based redirect - will send users to their appropriate dashboard */}
+          <Route path="/dashboard" element={<RoleBasedRedirect />} />
+          
+          {/* Catch all route - redirect to 404 page */}
+          <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
       </div>
     </Router>

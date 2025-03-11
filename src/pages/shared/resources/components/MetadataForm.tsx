@@ -1,23 +1,25 @@
 import React, { useState } from 'react';
 import { Tag } from 'lucide-react';
+import { AVAILABLE_CLASSES, AVAILABLE_SUBJECTS } from '../../../../types/resource';
+import toast from 'react-hot-toast';
 
-const classes = ['Class 10', 'Class 11', 'Class 12'];
-const subjects = {
-  'Class 10': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-  'Class 11': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-  'Class 12': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-};
-const chapters = {
-  Mathematics: ['Algebra', 'Geometry', 'Calculus'],
-  Physics: ['Mechanics', 'Thermodynamics', 'Optics'],
-  Chemistry: ['Organic Chemistry', 'Inorganic Chemistry', 'Physical Chemistry'],
-  Biology: ['Cell Biology', 'Genetics', 'Evolution'],
-};
+interface MetadataFormProps {
+  onSubmit: (metadata: {
+    title: string;
+    description: string;
+    class: string;
+    subject: string;
+    chapter: string;
+    book?: string;
+    tags: string[];
+  }) => void;
+  disabled?: boolean;
+}
 
-export default function MetadataForm() {
+export default function MetadataForm({ onSubmit, disabled = false }: MetadataFormProps) {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
+  const [chapter, setChapter] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [bookName, setBookName] = useState('');
@@ -36,8 +38,44 @@ export default function MetadataForm() {
     setTags(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validate required fields
+    if (!title.trim()) {
+      toast.error('Please enter a title');
+      return;
+    }
+
+    if (!selectedClass) {
+      toast.error('Please select a class');
+      return;
+    }
+
+    if (!selectedSubject) {
+      toast.error('Please select a subject');
+      return;
+    }
+
+    if (!chapter.trim()) {
+      toast.error('Please enter a chapter name');
+      return;
+    }
+
+    // Submit the form data
+    onSubmit({
+      title: title.trim(),
+      description: description.trim(),
+      class: selectedClass,
+      subject: selectedSubject,
+      chapter: chapter.trim(),
+      book: bookName.trim() || undefined,
+      tags
+    });
+  };
+
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-4 sm:p-6">
+    <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-4 sm:p-6">
       <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-6">
         Resource Details
       </h2>
@@ -54,6 +92,8 @@ export default function MetadataForm() {
             onChange={(e) => setTitle(e.target.value)}
             className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
             placeholder="Enter resource title"
+            disabled={disabled}
+            required
           />
         </div>
 
@@ -68,6 +108,7 @@ export default function MetadataForm() {
             rows={3}
             className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
             placeholder="Enter resource description"
+            disabled={disabled}
           />
         </div>
 
@@ -79,16 +120,14 @@ export default function MetadataForm() {
             </label>
             <select
               value={selectedClass}
-              onChange={(e) => {
-                setSelectedClass(e.target.value);
-                setSelectedSubject('');
-                setSelectedChapters([]);
-              }}
+              onChange={(e) => setSelectedClass(e.target.value)}
               className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+              disabled={disabled}
+              required
             >
               <option value="">Select a class</option>
-              {classes.map((cls) => (
-                <option key={cls} value={cls}>{cls}</option>
+              {AVAILABLE_CLASSES.map((cls) => (
+                <option key={cls} value={cls}>Class {cls}</option>
               ))}
             </select>
           </div>
@@ -99,42 +138,33 @@ export default function MetadataForm() {
             </label>
             <select
               value={selectedSubject}
-              onChange={(e) => {
-                setSelectedSubject(e.target.value);
-                setSelectedChapters([]);
-              }}
-              disabled={!selectedClass}
+              onChange={(e) => setSelectedSubject(e.target.value)}
               className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+              disabled={disabled}
+              required
             >
               <option value="">Select a subject</option>
-              {selectedClass && subjects[selectedClass as keyof typeof subjects].map((subject) => (
+              {AVAILABLE_SUBJECTS.map((subject) => (
                 <option key={subject} value={subject}>{subject}</option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Chapters */}
+        {/* Chapter */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Chapters
+            Chapter
           </label>
-          <select
-            multiple
-            value={selectedChapters}
-            onChange={(e) => setSelectedChapters(
-              Array.from(e.target.selectedOptions, option => option.value)
-            )}
-            disabled={!selectedSubject}
-            className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 h-32"
-          >
-            {selectedSubject && chapters[selectedSubject as keyof typeof chapters].map((chapter) => (
-              <option key={chapter} value={chapter}>{chapter}</option>
-            ))}
-          </select>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Hold Ctrl/Cmd to select multiple chapters
-          </p>
+          <input
+            type="text"
+            value={chapter}
+            onChange={(e) => setChapter(e.target.value)}
+            className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+            placeholder="Enter chapter name"
+            disabled={disabled}
+            required
+          />
         </div>
 
         {/* Book Name */}
@@ -148,6 +178,7 @@ export default function MetadataForm() {
             onChange={(e) => setBookName(e.target.value)}
             className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
             placeholder="Enter book name"
+            disabled={disabled}
           />
         </div>
 
@@ -165,8 +196,10 @@ export default function MetadataForm() {
                 <Tag className="w-3 h-3 mr-1" />
                 {tag}
                 <button
+                  type="button"
                   onClick={() => removeTag(index)}
                   className="ml-1 hover:text-primary-900 dark:hover:text-primary-100"
+                  disabled={disabled}
                 >
                   ×
                 </button>
@@ -179,6 +212,7 @@ export default function MetadataForm() {
               onKeyDown={handleTagAdd}
               className="flex-1 min-w-[120px] bg-transparent border-0 focus:ring-0 text-gray-900 dark:text-white p-1"
               placeholder="Add tags..."
+              disabled={disabled}
             />
           </div>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -189,19 +223,14 @@ export default function MetadataForm() {
         {/* Submit Button */}
         <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
           <button
-            type="button"
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-          >
-            Save as Draft
-          </button>
-          <button
             type="submit"
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={disabled}
           >
-            Upload Resources
+            Upload Resource
           </button>
         </div>
       </div>
-    </div>
+    </form>
   );
 }

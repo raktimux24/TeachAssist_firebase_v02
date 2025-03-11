@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
-import { User, Palette, Bell } from 'lucide-react';
+import { User, Palette } from 'lucide-react';
 import ProfileSettings from './ProfileSettings';
 import ThemeSettings from './ThemeSettings';
-import NotificationSettings from './NotificationSettings';
 
 interface SettingsTabsProps {
   isDarkMode: boolean;
   onThemeToggle: () => void;
 }
 
-type TabId = 'profile' | 'theme' | 'notifications';
+type TabId = 'profile' | 'theme';
 
 const tabs = [
   { id: 'profile', label: 'Profile Settings', icon: User },
   { id: 'theme', label: 'Theme Preferences', icon: Palette },
-  { id: 'notifications', label: 'Notification Settings', icon: Bell },
 ];
 
 export default function SettingsTabs({ isDarkMode, onThemeToggle }: SettingsTabsProps) {
@@ -58,7 +56,6 @@ export default function SettingsTabs({ isDarkMode, onThemeToggle }: SettingsTabs
         {activeTab === 'theme' && (
           <ThemeSettings isDarkMode={isDarkMode} onThemeToggle={onThemeToggle} />
         )}
-        {activeTab === 'notifications' && <NotificationSettings />}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { User, LogOut, Settings, ChevronDown, Menu, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 
 interface StudentHeaderProps {
@@ -28,13 +29,16 @@ export default function StudentHeader({ onMenuClick, isDarkMode, onThemeToggle }
     };
   }, []);
 
-  const handleSignOut = () => {
-    // TODO: Implement actual sign out logic here
-    console.log('Signing out...');
-    
-    // Navigate to login page
-    navigate('/login');
-    setIsDropdownOpen(false);
+  const { logout } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      navigate('/login');
+      setIsDropdownOpen(false);
+    } catch (error) {
+      console.error('Failed to sign out:', error);
+    }
   };
 
   return (

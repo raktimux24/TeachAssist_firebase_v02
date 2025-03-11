@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { User, LogOut, Settings, ChevronDown, Menu, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 
 interface AdminHeaderProps {
@@ -14,6 +15,7 @@ export default function AdminHeader({ onMenuClick, isDarkMode, onThemeToggle }: 
   const location = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { logout, currentUser, userInfo } = useAuth();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -26,9 +28,13 @@ export default function AdminHeader({ onMenuClick, isDarkMode, onThemeToggle }: 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSignOut = () => {
-    // Add sign out logic here
-    navigate('/login');
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Failed to sign out:', error);
+    }
   };
 
   return (
@@ -78,10 +84,18 @@ export default function AdminHeader({ onMenuClick, isDarkMode, onThemeToggle }: 
                 aria-expanded={isDropdownOpen}
                 aria-haspopup="true"
               >
-                <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                  <User className="h-5 w-5" />
+                <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                  {currentUser?.photoURL ? (
+                    <img
+                      src={currentUser.photoURL}
+                      alt={userInfo?.fullName || 'Profile'}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-5 w-5" />
+                  )}
                 </div>
-                <span className="hidden sm:inline">Admin User</span>
+                <span className="hidden sm:inline">{userInfo?.fullName || 'Admin User'}</span>
                 <ChevronDown className="h-4 w-4" />
               </button>
 

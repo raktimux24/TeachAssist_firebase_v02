@@ -1,15 +1,43 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { login, getUserRole } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement login logic
-    console.log('Login:', { email, password });
+    
+    try {
+      setError('');
+      setLoading(true);
+      await login(email, password);
+      
+      // Get user role and redirect accordingly
+      const userRole = getUserRole();
+      
+      if (userRole === 'admin') {
+        navigate('/admin');
+      } else if (userRole === 'teacher') {
+        navigate('/teacher');
+      } else if (userRole === 'student') {
+        navigate('/student');
+      } else {
+        // Default fallback if role is not recognized
+        navigate('/');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Failed to sign in. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -18,6 +46,12 @@ export default function Login() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
           Login to TeachAssist
         </h1>
+        
+        {error && (
+          <div className="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800">
+            {error}
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -50,9 +84,10 @@ export default function Login() {
           
           <button
             type="submit"
-            className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-semibold transition-colors"
+            disabled={loading}
+            className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            Login
+            {loading ? 'Signing in...' : 'Login'}
           </button>
         </form>
         

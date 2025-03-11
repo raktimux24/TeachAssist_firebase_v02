@@ -1,14 +1,30 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { resetPassword } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement password reset logic
-    console.log('Reset password for:', email);
+    
+    try {
+      setMessage('');
+      setError('');
+      setLoading(true);
+      await resetPassword(email);
+      setMessage('Check your email for password reset instructions');
+    } catch (err) {
+      console.error('Password reset error:', err);
+      setError('Failed to reset password. Please check your email address.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -21,6 +37,18 @@ export default function ForgotPassword() {
         <p className="text-gray-600 dark:text-gray-400 text-center mb-8">
           Enter your email address and we'll send you instructions to reset your password.
         </p>
+        
+        {message && (
+          <div className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-lg dark:bg-green-200 dark:text-green-800">
+            {message}
+          </div>
+        )}
+        
+        {error && (
+          <div className="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800">
+            {error}
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -39,9 +67,10 @@ export default function ForgotPassword() {
           
           <button
             type="submit"
-            className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-semibold transition-colors"
+            disabled={loading}
+            className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            Reset Password
+            {loading ? 'Sending...' : 'Reset Password'}
           </button>
         </form>
         

@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { Save, X } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
+import toast, { Toaster } from 'react-hot-toast';
+import { successToastOptions, errorToastOptions, toasterProps } from '../../utils/toastConfig';
 
 interface AddUserProps {
   isDarkMode: boolean;
@@ -8,6 +12,27 @@ interface AddUserProps {
 }
 
 export default function AddUser({ isDarkMode, onThemeToggle }: AddUserProps) {
+  const { signup, userInfo } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Ensure the current user is an admin
+  useEffect(() => {
+    // Check if user is logged in and is not an admin
+    if (userInfo && userInfo.role !== 'admin') {
+      console.log('Non-admin user detected, redirecting to appropriate dashboard');
+      navigate('/dashboard', { replace: true });
+    }
+    
+    // Check if we're returning from creating a user (via browser history state)
+    const state = location.state as any;
+    if (state?.newUserCreated) {
+      console.log('Returned to AddUser after creating a user, redirecting back to user management');
+      navigate('/admin/users', { replace: true });
+    }
+  }, [userInfo, navigate, location.state]);
+  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -15,14 +40,91 @@ export default function AddUser({ isDarkMode, onThemeToggle }: AddUserProps) {
     username: '',
     password: '',
     organization: '',
-    role: 'user',
+    role: 'admin', // Set default role to admin since this is the admin panel
     status: 'active'
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement user creation logic
-    console.log('Create user:', formData);
+    setIsSubmitting(true);
+    
+    try {
+      // Validate role selection
+      if (!['admin', 'teacher', 'student'].includes(formData.role)) {
+        throw new Error('Please select a valid role: admin, teacher, or student');
+      }
+      
+      // Prepare user data for signup
+      const userData = {
+        fullName: `${formData.firstName} ${formData.lastName}`,
+        email: formData.email,
+        role: formData.role,
+        organization: formData.organization
+      };
+      
+      console.log('Creating user with role:', formData.role);
+      
+      // Create user in Firebase - pass false to indicate this is not the current user
+      // This prevents the admin from being logged out when creating a new user
+      await signup(formData.email, formData.password, userData, false);
+      
+      // Show success toast with brand-aligned styling and a slight delay before navigation
+      const toastId = toast.success(`User created successfully with role: ${formData.role}!`, {
+        ...successToastOptions,
+        // This ensures the toast stays visible even during navigation
+        id: 'user-created-success',
+        duration: 5000, // Longer duration to ensure visibility
+      });
+      
+      // Force toast to render immediately
+      toast.dismiss();
+      toast(toastId);
+      
+      // Reset form
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        username: '',
+        password: '',
+        organization: '',
+        role: 'admin',
+        status: 'active'
+      });
+      
+      // Add a small delay to ensure the toast is visible before navigation
+      console.log('Will redirect to /admin/users after brief delay for toast visibility');
+      
+      // Short delay to ensure toast is visible
+      setTimeout(() => {
+        // Use navigation with state to ensure proper routing
+        navigate('/admin/users', { 
+          replace: true, 
+          state: { 
+            forceAdmin: true,
+            newUserCreated: true,
+            userRole: formData.role,
+            timestamp: new Date().getTime(),
+            toastId: toastId // Pass the toast ID to potentially dismiss it if needed
+          } 
+        });
+      }, 800); // Short delay for toast visibility
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create user', {
+        ...errorToastOptions,
+        duration: 5000, // Longer duration for error messages
+        style: {
+          ...successToastOptions.style,
+          borderLeft: '4px solid #EF4444', // Red border for error
+        },
+        iconTheme: {
+          primary: '#EF4444',
+          secondary: 'white',
+        },
+      });
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -35,6 +137,29 @@ export default function AddUser({ isDarkMode, onThemeToggle }: AddUserProps) {
 
   return (
     <AdminLayout isDarkMode={isDarkMode} onThemeToggle={onThemeToggle}>
+      {/* Enhanced Toaster with brand-aligned styling */}
+      <Toaster 
+        position="top-center" 
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#ffffff',
+            color: '#333333',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+            fontWeight: '500',
+            zIndex: 9999,
+            borderLeft: '4px solid #0055FF', // primary-600 color
+          },
+        }}
+        containerStyle={{
+          top: 40,
+          left: 20,
+          right: 20,
+          zIndex: 9999,
+        }}
+      />
       <div className="max-w-4xl mx-auto">
         <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
           <form onSubmit={handleSubmit} className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -210,10 +335,11 @@ export default function AddUser({ isDarkMode, onThemeToggle }: AddUserProps) {
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                disabled={isSubmitting}
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save className="h-4 w-4 mr-2" />
-                Save User
+                {isSubmitting ? 'Saving...' : 'Save User'}
               </button>
             </div>
           </form>

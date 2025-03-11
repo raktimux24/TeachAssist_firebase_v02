@@ -1,160 +1,173 @@
-import React from 'react';
-import { FileText, FileImage, Film, FileSpreadsheet, File, MoreVertical, Download, Pencil, Trash2 } from 'lucide-react';
-
-interface Resource {
-  id: string;
-  name: string;
-  type: string;
-  class?: string;
-  subject?: string;
-  book?: string;
-  chapter?: string;
-  size: string;
-  lastModified: string;
-  thumbnail?: string;
-}
-
-const resources: Resource[] = [
-  {
-    id: '1',
-    name: 'Mathematics Curriculum Guide',
-    type: 'document',
-    subject: 'mathematics',
-    size: '2.5 MB',
-    lastModified: '2 days ago',
-  },
-  {
-    id: '2',
-    name: 'Physics Lab Instructions',
-    type: 'pdf',
-    subject: 'physics',
-    size: '1.8 MB',
-    lastModified: '5 days ago',
-  },
-  {
-    id: '3',
-    name: 'Chemistry Experiment Results',
-    type: 'spreadsheet',
-    subject: 'chemistry',
-    size: '956 KB',
-    lastModified: '1 week ago',
-  },
-  {
-    id: '4',
-    name: 'Literature Study Guide',
-    type: 'document',
-    subject: 'literature',
-    size: '1.2 MB',
-    lastModified: '3 days ago',
-  },
-];
-
-const getFileIcon = (type: string) => {
-  switch (type) {
-    case 'document':
-      return FileText;
-    case 'spreadsheet':
-      return FileSpreadsheet;
-    case 'video':
-      return Film;
-    case 'image':
-      return FileImage;
-    default:
-      return File;
-  }
-};
+import React, { useState } from 'react';
+import { Resource } from '../../../types/resource';
+import { FileIcon, Download, Trash2, Loader2 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import toast from 'react-hot-toast';
+import { deleteResource } from '../../../firebase/resources';
 
 interface ResourceGridProps {
-  searchQuery: string;
-  selectedClass: string;
-  selectedSubject: string;
-  selectedBook: string;
-  selectedChapter: string;
-  showOnlyUserResources?: boolean;
+  resources: Resource[];
+  onResourceDeleted: () => void;
 }
 
-export default function ResourceGrid({ 
-  searchQuery, 
-  selectedClass, 
-  selectedSubject,
-  selectedBook,
-  selectedChapter,
-  showOnlyUserResources = false,
-}: ResourceGridProps) {
-  const filteredResources = resources.filter(resource => {
-    const matchesSearch = resource.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesClass = selectedClass === 'all' || resource.class === selectedClass;
-    const matchesSubject = selectedSubject === 'all' || resource.subject === selectedSubject;
-    const matchesBook = selectedBook === 'all' || resource.book === selectedBook;
-    const matchesChapter = selectedChapter === 'all' || resource.chapter === selectedChapter;
-    const matchesUser = !showOnlyUserResources || resource.userId === 'current-user-id'; // Replace with actual user ID check
-    return matchesSearch && matchesClass && matchesSubject && matchesBook && matchesChapter && matchesUser;
-  });
+export default function ResourceGrid({ resources, onResourceDeleted }: ResourceGridProps) {
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const handleDownload = async (resource: Resource) => {
+    if (!resource.id || !resource.fileUrl) return;
+    
+    try {
+      setDownloadingId(resource.id);
+      const response = await fetch(resource.fileUrl);
+      if (!response.ok) throw new Error('Download failed');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = resource.fileName || 'download';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success('File downloaded successfully');
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Failed to download file');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleDelete = async (resource: Resource) => {
+    if (!resource.id || !resource.fileUrl) return;
+    
+    if (!window.confirm('Are you sure you want to delete this resource? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingId(resource.id);
+      await deleteResource(resource.id, resource.fileUrl);
+      toast.success('Resource deleted successfully');
+      onResourceDeleted();
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('Failed to delete resource');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {filteredResources.map((resource) => {
-        const Icon = getFileIcon(resource.type);
-        
-        return (
-          <div
-            key={resource.id}
-            className="relative group bg-white dark:bg-gray-800 rounded-lg shadow-sm ring-1 ring-gray-900/5 hover:shadow-md transition-shadow"
-          >
-            <div className="p-4 relative">
-              <div className="flex items-center justify-between mb-4">
-                <Icon className="h-8 w-8 text-primary-600 dark:text-primary-400" />
-                <div className="relative">
-                  <button
-                    className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 z-20"
-                    onClick={() => console.log('More options clicked')}
-                  >
-                    <MoreVertical className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                  </button>
-                  
-                  {/* Action buttons that appear on hover */}
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 hidden group-hover:block z-30">
-                    <div className="py-1">
-                      <button
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        onClick={() => console.log('Download clicked')}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
-                      </button>
-                      <button
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        onClick={() => console.log('Edit clicked')}
-                      >
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Edit
-                      </button>
-                      <button
-                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        onClick={() => console.log('Delete clicked')}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </button>
-                    </div>
-                  </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      {resources.map((resource) => (
+        <div
+          key={resource.id}
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col"
+        >
+          <div className="p-4 flex flex-col flex-1">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center space-x-3 min-w-0">
+                <div className="flex-shrink-0 p-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
+                  <FileIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white break-words">
+                    {resource.title}
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {resource.fileName}
+                  </p>
                 </div>
               </div>
-              
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                {resource.name}
-              </h3>
-              
-              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                <p>Size: {resource.size}</p>
-                <p>Modified: {resource.lastModified}</p>
-                <p className="capitalize">Type: {resource.type}</p>
-                <p className="capitalize">Subject: {resource.subject}</p>
+              <div className="flex items-center space-x-2 flex-shrink-0">
+                <button
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleDownload(resource)}
+                  disabled={downloadingId === resource.id || deletingId === resource.id}
+                  title="Download resource"
+                >
+                  {downloadingId === resource.id ? (
+                    <Loader2 className="h-4 w-4 text-gray-500 dark:text-gray-400 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  )}
+                </button>
+                <button 
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleDelete(resource)}
+                  disabled={downloadingId === resource.id || deletingId === resource.id}
+                  title="Delete resource"
+                >
+                  {deletingId === resource.id ? (
+                    <Loader2 className="h-4 w-4 text-gray-500 dark:text-gray-400 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2 flex-1">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Class</span>
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {resource.class}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Subject</span>
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {resource.subject}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Chapter</span>
+                <span className="font-medium text-gray-900 dark:text-white break-words text-right">
+                  {resource.chapter}
+                </span>
+              </div>
+              {resource.book && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">Book</span>
+                  <span className="font-medium text-gray-900 dark:text-white break-words text-right">
+                    {resource.book}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {resource.tags.length > 0 && (
+              <div className="mt-4">
+                <div className="flex flex-wrap gap-2">
+                  {resource.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                <span className="truncate mr-4">
+                  By {resource.uploadedByName}
+                </span>
+                <span className="flex-shrink-0">
+                  {formatDistanceToNow(new Date(resource.createdAt), { addSuffix: true })}
+                </span>
               </div>
             </div>
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }

@@ -2,6 +2,10 @@ import React, { useState, useRef } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { Download, Upload, X, AlertCircle, CheckCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { successToastOptions, errorToastOptions } from '../../utils/toastConfig';
 
 interface BulkUserUploadProps {
   isDarkMode: boolean;
@@ -25,6 +29,7 @@ const ALLOWED_FILE_TYPES = [
 ];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_USERS = 1000;
+const BATCH_SIZE = 10; // Process 10 users at a time
 
 export default function BulkUserUpload({ isDarkMode, onThemeToggle }: BulkUserUploadProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -33,6 +38,8 @@ export default function BulkUserUpload({ isDarkMode, onThemeToggle }: BulkUserUp
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { signup } = useAuth();
+  const navigate = useNavigate();
 
   const downloadTemplate = () => {
     const template = [
@@ -139,29 +146,91 @@ export default function BulkUserUpload({ isDarkMode, onThemeToggle }: BulkUserUp
   };
 
   const handleUpload = async () => {
+    if (!users.length || validationErrors.length > 0) return;
+
     setIsProcessing(true);
     setUploadProgress(0);
 
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
+    const validUsers = users.filter(user => !user.errors?.length);
+    const totalUsers = validUsers.length;
+    let successCount = 0;
+    let failedUsers: { user: UserData; error: string }[] = [];
+
+    // Process users in batches
+    for (let i = 0; i < validUsers.length; i += BATCH_SIZE) {
+      const batch = validUsers.slice(i, i + BATCH_SIZE);
+      
+      // Process each user in the current batch
+      const batchPromises = batch.map(async (user) => {
+        try {
+          // Generate a temporary password (you might want to implement a more secure way)
+          const tempPassword = Math.random().toString(36).slice(-8);
+          
+          // Prepare user data for signup
+          const userData = {
+            fullName: `${user.firstName} ${user.lastName}`,
+            email: user.email,
+            role: (user.roles?.toLowerCase() || 'student') as 'admin' | 'teacher' | 'student',
+            organization: user.organization || 'Default Organization'
+          };
+
+          // Create user account
+          await signup(user.email, tempPassword, userData, false);
+          successCount++;
+          
+          // TODO: Implement password reset email sending or store temporary passwords securely
+          
+        } catch (error) {
+          failedUsers.push({
+            user,
+            error: error instanceof Error ? error.message : 'Unknown error occurred'
+          });
         }
-        return prev + 10;
       });
-    }, 500);
 
-    // TODO: Implement actual upload logic here
-    // This is where you would send the data to your backend
+      // Wait for all users in the current batch to be processed
+      await Promise.all(batchPromises);
 
-    // Cleanup
-    setTimeout(() => {
-      clearInterval(interval);
+      // Update progress
+      const progress = Math.min(((i + BATCH_SIZE) / totalUsers) * 100, 100);
+      setUploadProgress(progress);
+    }
+
+    // Show completion message
+    if (successCount > 0) {
+      toast.success(
+        `Successfully created ${successCount} user${successCount > 1 ? 's' : ''}${
+          failedUsers.length > 0 ? `. ${failedUsers.length} failed.` : ''
+        }`,
+        successToastOptions
+      );
+
+      // If there were any failures, show them in a separate toast
+      if (failedUsers.length > 0) {
+        toast.error(
+          `Failed to create ${failedUsers.length} user(s). Check console for details.`,
+          errorToastOptions
+        );
+        console.error('Failed users:', failedUsers);
+      }
+
+      // Reset the form
+      handleCancel();
+
+      // Redirect back to user management with success state
+      navigate('/admin/users', {
+        replace: true,
+        state: {
+          bulkUploadComplete: true,
+          successCount,
+          failedCount: failedUsers.length,
+          timestamp: new Date().getTime()
+        }
+      });
+    } else {
+      toast.error('Failed to create any users. Please try again.', errorToastOptions);
       setIsProcessing(false);
-      setUploadProgress(100);
-    }, 5000);
+    }
   };
 
   const handleCancel = () => {

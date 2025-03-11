@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -11,14 +12,47 @@ export default function Signup() {
     password: '',
     confirmPassword: '',
   });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { signup } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement signup logic
-    console.log('Signup:', formData);
+    
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      return setError('Passwords do not match');
+    }
+
+    // Validate password length
+    if (formData.password.length < 6) {
+      return setError('Password must be at least 6 characters');
+    }
+
+    try {
+      setError('');
+      setLoading(true);
+      
+      // Create user with Firebase Authentication
+      await signup(formData.email, formData.password, {
+        fullName: formData.fullName,
+        email: formData.email,
+        role: formData.role,
+        organization: formData.organization
+      });
+      
+      // Redirect to home page after successful signup
+      navigate('/');
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError('Failed to create an account. The email may already be in use.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -31,6 +65,12 @@ export default function Signup() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
           Create Your Account
         </h1>
+        
+        {error && (
+          <div className="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800">
+            {error}
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -130,9 +170,10 @@ export default function Signup() {
           
           <button
             type="submit"
-            className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-semibold transition-colors"
+            disabled={loading}
+            className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            Sign Up
+            {loading ? 'Creating Account...' : 'Sign Up'}
           </button>
         </form>
         
