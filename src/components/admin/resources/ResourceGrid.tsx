@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Resource } from '../../../types/resource';
 import { FileIcon, Download, Trash2, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -194,26 +194,26 @@ export default function ResourceGrid({
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500 dark:text-gray-400">Class</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {resource.classId}
+                  {resource.class}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500 dark:text-gray-400">Subject</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {resource.subjectId}
+                  {resource.subject}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500 dark:text-gray-400">Chapter</span>
                 <span className="font-medium text-gray-900 dark:text-white break-words text-right">
-                  {resource.chapterId}
+                  {resource.chapter}
                 </span>
               </div>
-              {resource.bookId && (
+              {resource.book && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500 dark:text-gray-400">Book</span>
                   <span className="font-medium text-gray-900 dark:text-white break-words text-right">
-                    {resource.bookId}
+                    {resource.book}
                   </span>
                 </div>
               )}

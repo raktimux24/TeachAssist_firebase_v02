@@ -10,6 +10,11 @@ export interface Resource {
   subjectId: string;
   bookId: string;
   chapterId: string;
+  // Add the new field names used in fetchResources
+  class?: string;
+  subject?: string;
+  book?: string;
+  chapter?: string;
   tags: string[];
   uploadedBy: string;
   uploadedByName: string;

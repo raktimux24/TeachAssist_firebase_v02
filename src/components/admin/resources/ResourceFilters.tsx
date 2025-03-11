@@ -1,14 +1,15 @@
-import React from 'react';
 import { Search } from 'lucide-react';
-import { AVAILABLE_CLASSES, AVAILABLE_SUBJECTS } from '../../../types/resource';
+import { AVAILABLE_CLASSES, AVAILABLE_SUBJECTS, AVAILABLE_CHAPTERS } from '../../../constants/resources';
 
 interface ResourceFiltersProps {
   searchQuery: string;
-  onSearchChange: (query: string) => void;
+  onSearchChange: (value: string) => void;
   selectedClass: string;
-  onClassChange: (cls: string) => void;
+  onClassChange: (value: string) => void;
   selectedSubject: string;
-  onSubjectChange: (subject: string) => void;
+  onSubjectChange: (value: string) => void;
+  selectedChapter?: string;
+  onChapterChange?: (value: string) => void;
 }
 
 export default function ResourceFilters({
@@ -18,6 +19,8 @@ export default function ResourceFilters({
   onClassChange,
   selectedSubject,
   onSubjectChange,
+  selectedChapter,
+  onChapterChange,
 }: ResourceFiltersProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-4 flex-1">
@@ -44,7 +47,7 @@ export default function ResourceFilters({
           className="block w-full sm:w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
         >
           <option value="all">All Classes</option>
-          {AVAILABLE_CLASSES.map((cls) => (
+          {AVAILABLE_CLASSES.map((cls: string) => (
             <option key={cls} value={cls}>Class {cls}</option>
           ))}
         </select>
@@ -56,10 +59,24 @@ export default function ResourceFilters({
           className="block w-full sm:w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
         >
           <option value="all">All Subjects</option>
-          {AVAILABLE_SUBJECTS.map((subject) => (
+          {AVAILABLE_SUBJECTS.map((subject: string) => (
             <option key={subject} value={subject}>{subject}</option>
           ))}
         </select>
+
+        {/* Chapter Filter */}
+        {onChapterChange && (
+          <select
+            value={selectedChapter || 'all'}
+            onChange={(e) => onChapterChange(e.target.value)}
+            className="block w-full sm:w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+          >
+            <option value="all">All Chapters</option>
+            {AVAILABLE_CHAPTERS.map((chapter: string) => (
+              <option key={chapter} value={chapter}>{chapter}</option>
+            ))}
+          </select>
+        )}
       </div>
     </div>
   );

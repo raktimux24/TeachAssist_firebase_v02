@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { Resource } from '../../types/resource';
 import AdminLayout from '../../components/admin/AdminLayout';
-import ResourceFilters from '../../components/admin/resources/ResourceFilters';
 import ResourceGrid from '../../components/admin/resources/ResourceGrid';
 import ResourceTable from '../../components/admin/resources/ResourceTable';
+import ResourceFilters from '../../components/admin/resources/ResourceFilters';
 import ResourceActionPanel from '../../components/admin/resources/ResourceActionPanel';
-import { ViewIcon, GridIcon } from 'lucide-react';
 import { fetchResources } from '../../firebase/resources';
-import { Resource } from '../../types/resource';
+import { GridIcon, ViewIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface ResourceLibraryProps {
@@ -18,7 +18,6 @@ export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceL
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedSubject, setSelectedSubject] = useState('all');
-  const [selectedBook, setSelectedBook] = useState('all');
   const [selectedChapter, setSelectedChapter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [resources, setResources] = useState<Resource[]>([]);
@@ -31,7 +30,6 @@ export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceL
         searchQuery,
         class: selectedClass,
         subject: selectedSubject,
-        book: selectedBook,
         chapter: selectedChapter
       });
       setResources(fetchedResources);
@@ -45,7 +43,7 @@ export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceL
 
   useEffect(() => {
     loadResources();
-  }, [searchQuery, selectedClass, selectedSubject, selectedBook, selectedChapter]);
+  }, [searchQuery, selectedClass, selectedSubject, selectedChapter]);
 
   const handleResourceDeleted = () => {
     loadResources();
@@ -70,8 +68,6 @@ export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceL
               onClassChange={setSelectedClass}
               selectedSubject={selectedSubject}
               onSubjectChange={setSelectedSubject}
-              selectedBook={selectedBook}
-              onBookChange={setSelectedBook}
               selectedChapter={selectedChapter}
               onChapterChange={setSelectedChapter}
             />
@@ -100,12 +96,18 @@ export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceL
             </div>
           </div>
 
-          {loading ? (
+          {loading && viewMode === 'table' ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
           ) : viewMode === 'grid' ? (
-            <ResourceGrid resources={resources} onResourceDeleted={handleResourceDeleted} />
+            <ResourceGrid 
+              searchQuery={searchQuery}
+              selectedClass={selectedClass}
+              selectedSubject={selectedSubject}
+              selectedType={selectedChapter}
+              onResourceDeleted={handleResourceDeleted} 
+            />
           ) : (
             <ResourceTable resources={resources} onResourceDeleted={handleResourceDeleted} />
           )}
