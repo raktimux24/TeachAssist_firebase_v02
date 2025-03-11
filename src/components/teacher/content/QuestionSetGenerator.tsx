@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BasicSettings from './question-sets/BasicSettings';
 import QuestionTypeSelector from './question-sets/QuestionTypeSelector';
@@ -17,7 +17,11 @@ const chapters = {
   Biology: ['Cell Biology', 'Genetics', 'Evolution'],
 };
 
-export default function QuestionSetGenerator() {
+interface QuestionSetGeneratorProps {
+  isDarkMode: boolean;
+}
+
+export default function QuestionSetGenerator({ isDarkMode }: QuestionSetGeneratorProps) {
   const navigate = useNavigate();
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
@@ -74,6 +78,7 @@ export default function QuestionSetGenerator() {
             classes={classes}
             subjects={subjects}
             chapters={chapters}
+            isDarkMode={isDarkMode}
           />
 
           <QuestionTypeSelector
@@ -83,6 +88,7 @@ export default function QuestionSetGenerator() {
             setDifficulty={setDifficulty}
             includeAnswers={includeAnswers}
             setIncludeAnswers={setIncludeAnswers}
+            isDarkMode={isDarkMode}
           />
 
           <ConfigurationSummary
@@ -91,6 +97,7 @@ export default function QuestionSetGenerator() {
             selectedChapters={selectedChapters}
             difficulty={difficulty}
             totalQuestions={totalQuestions}
+            isDarkMode={isDarkMode}
           />
 
           <div className="flex justify-end">

@@ -11,7 +11,7 @@ export default function GenerateNotes({ isDarkMode, onThemeToggle }: GenerateNot
   return (
     <TeacherLayout isDarkMode={isDarkMode} onThemeToggle={onThemeToggle}>
       <div className="py-6">
-        <NotesGenerator />
+        <NotesGenerator isDarkMode={isDarkMode} />
       </div>
     </TeacherLayout>
   );

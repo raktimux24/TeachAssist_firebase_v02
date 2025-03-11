@@ -11,7 +11,7 @@ export default function GeneratePresentations({ isDarkMode, onThemeToggle }: Gen
   return (
     <TeacherLayout isDarkMode={isDarkMode} onThemeToggle={onThemeToggle}>
       <div className="py-6">
-        <PresentationsGenerator />
+        <PresentationsGenerator isDarkMode={isDarkMode} />
       </div>
     </TeacherLayout>
   );

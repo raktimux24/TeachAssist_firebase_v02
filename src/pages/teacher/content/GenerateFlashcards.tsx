@@ -11,7 +11,7 @@ export default function GenerateFlashcards({ isDarkMode, onThemeToggle }: Genera
   return (
     <TeacherLayout isDarkMode={isDarkMode} onThemeToggle={onThemeToggle}>
       <div className="py-6">
-        <FlashcardsGenerator />
+        <FlashcardsGenerator isDarkMode={isDarkMode} />
       </div>
     </TeacherLayout>
   );

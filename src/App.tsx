@@ -73,25 +73,36 @@ function App() {
   useEffect(() => {
     const savedTheme = localStorage.getItem('darkMode');
     if (savedTheme) {
-      setIsDarkMode(savedTheme === 'true');
+      const darkModeValue = savedTheme === 'true';
+      console.log('[App] Loading dark mode from localStorage:', darkModeValue);
+      setIsDarkMode(darkModeValue);
     }
   }, []);
 
   useEffect(() => {
+    console.log('[App] Dark mode changed:', isDarkMode);
+    
     // Apply dark mode class to document
     if (isDarkMode) {
+      console.log('[App] Adding dark class to document');
       document.documentElement.classList.add('dark');
     } else {
+      console.log('[App] Removing dark class from document');
       document.documentElement.classList.remove('dark');
     }
     
     // Save theme preference to localStorage
     localStorage.setItem('darkMode', isDarkMode.toString());
+    console.log('[App] Saved dark mode to localStorage:', isDarkMode);
   }, [isDarkMode]);
   
   // Function to toggle theme with proper state management
   const handleThemeToggle = () => {
-    setIsDarkMode(prevMode => !prevMode);
+    console.log('[App] Toggle theme called, current state:', isDarkMode);
+    setIsDarkMode(prevMode => {
+      console.log('[App] Setting dark mode to:', !prevMode);
+      return !prevMode;
+    });
   };
 
   return (

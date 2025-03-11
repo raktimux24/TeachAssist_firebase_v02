@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BasicSettings from './presentations/BasicSettings';
 import PresentationTypeSelector from './presentations/PresentationTypeSelector';
 import AdvancedSettings from './presentations/AdvancedSettings';
 import ConfigurationSummary from './presentations/ConfigurationSummary';
+
+interface PresentationsGeneratorProps {
+  isDarkMode: boolean;
+}
 
 const classes = ['Class 10', 'Class 11', 'Class 12'];
 const subjects = {
@@ -51,7 +55,7 @@ const presentationTypes = [
   },
 ];
 
-export default function PresentationsGenerator() {
+export default function PresentationsGenerator({ isDarkMode }: PresentationsGeneratorProps) {
   const navigate = useNavigate();
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
@@ -100,12 +104,14 @@ export default function PresentationsGenerator() {
             classes={classes}
             subjects={subjects}
             chapters={chapters}
+            isDarkMode={isDarkMode}
           />
 
           <PresentationTypeSelector
             presentationTypes={presentationTypes}
             selectedType={presentationType}
             onTypeChange={setPresentationType}
+            isDarkMode={isDarkMode}
           />
 
           <AdvancedSettings
@@ -115,6 +121,7 @@ export default function PresentationsGenerator() {
             setDesignTemplate={setDesignTemplate}
             additionalInstructions={additionalInstructions}
             setAdditionalInstructions={setAdditionalInstructions}
+            isDarkMode={isDarkMode}
           />
 
           <ConfigurationSummary
@@ -124,6 +131,7 @@ export default function PresentationsGenerator() {
             presentationType={presentationType}
             slideCount={slideCount}
             designTemplate={designTemplate}
+            isDarkMode={isDarkMode}
           />
 
           <div className="flex justify-end">

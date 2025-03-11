@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BasicSettings from './lesson-plans/BasicSettings';
 import LessonPlanOptions from './lesson-plans/LessonPlanOptions';
 import ConfigurationSummary from './lesson-plans/ConfigurationSummary';
+
+interface LessonPlanGeneratorProps {
+  isDarkMode: boolean;
+}
 
 const classes = ['Class 10', 'Class 11', 'Class 12'];
 const subjects = {
@@ -17,7 +21,14 @@ const chapters = {
   Biology: ['Cell Biology', 'Genetics', 'Evolution'],
 };
 
-export default function LessonPlanGenerator() {
+export default function LessonPlanGenerator({ isDarkMode }: LessonPlanGeneratorProps) {
+  console.log('[LessonPlanGenerator] Received isDarkMode:', isDarkMode);
+  
+  useEffect(() => {
+    console.log('[LessonPlanGenerator] isDarkMode changed:', isDarkMode);
+    console.log('[LessonPlanGenerator] document.documentElement.classList:', document.documentElement.classList.contains('dark'));
+  }, [isDarkMode]);
+  
   const navigate = useNavigate();
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
@@ -66,6 +77,7 @@ export default function LessonPlanGenerator() {
             classes={classes}
             subjects={subjects}
             chapters={chapters}
+            isDarkMode={isDarkMode}
           />
 
           <LessonPlanOptions
@@ -77,6 +89,7 @@ export default function LessonPlanGenerator() {
             setLearningObjectives={setLearningObjectives}
             requiredResources={requiredResources}
             setRequiredResources={setRequiredResources}
+            isDarkMode={isDarkMode}
           />
 
           <ConfigurationSummary
@@ -85,6 +98,7 @@ export default function LessonPlanGenerator() {
             selectedChapters={selectedChapters}
             format={format}
             numberOfClasses={numberOfClasses}
+            isDarkMode={isDarkMode}
           />
 
           <div className="flex justify-end">

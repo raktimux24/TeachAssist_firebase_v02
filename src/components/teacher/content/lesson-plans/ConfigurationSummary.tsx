@@ -7,6 +7,7 @@ interface ConfigurationSummaryProps {
   selectedChapters: string[];
   format: string;
   numberOfClasses: number;
+  isDarkMode?: boolean;
 }
 
 export default function ConfigurationSummary({
@@ -15,6 +16,7 @@ export default function ConfigurationSummary({
   selectedChapters,
   format,
   numberOfClasses,
+  isDarkMode,
 }: ConfigurationSummaryProps) {
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 pt-6">

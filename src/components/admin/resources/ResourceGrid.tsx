@@ -1,18 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Resource } from '../../../types/resource';
 import { FileIcon, Download, Trash2, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
-import { deleteResource } from '../../../firebase/resources';
+import { deleteResource, fetchResources } from '../../../firebase/resources';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface ResourceGridProps {
-  resources: Resource[];
-  onResourceDeleted: () => void;
+  searchQuery?: string;
+  selectedClass?: string;
+  selectedSubject?: string;
+  selectedType?: string;
+  showOnlyUserResources?: boolean;
+  onResourceDeleted?: () => void;
 }
 
-export default function ResourceGrid({ resources, onResourceDeleted }: ResourceGridProps) {
+export default function ResourceGrid({ 
+  searchQuery = '', 
+  selectedClass = 'all', 
+  selectedSubject = 'all', 
+  selectedType = 'all',
+  showOnlyUserResources = false,
+  onResourceDeleted 
+}: ResourceGridProps) {
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const { currentUser } = useAuth();
+
+  useEffect(() => {
+    const loadResources = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const fetchedResources = await fetchResources({
+          searchQuery,
+          class: selectedClass,
+          subject: selectedSubject,
+          chapter: selectedType
+        });
+        
+        let filteredResources = fetchedResources;
+
+        // Filter by user if showOnlyUserResources is true
+        if (showOnlyUserResources && currentUser) {
+          filteredResources = filteredResources.filter(
+            (resource: Resource) => resource.uploadedBy === currentUser.uid
+          );
+        }
+
+        setResources(filteredResources);
+      } catch (err) {
+        console.error('Error loading resources:', err);
+        setError('Failed to load resources');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadResources();
+  }, [searchQuery, selectedClass, selectedSubject, selectedType, showOnlyUserResources, currentUser]);
 
   const handleDownload = async (resource: Resource) => {
     if (!resource.id || !resource.fileUrl) return;
@@ -52,7 +101,11 @@ export default function ResourceGrid({ resources, onResourceDeleted }: ResourceG
       setDeletingId(resource.id);
       await deleteResource(resource.id, resource.fileUrl);
       toast.success('Resource deleted successfully');
-      onResourceDeleted();
+      if (onResourceDeleted) {
+        onResourceDeleted();
+      }
+      // Refresh the resources list
+      setResources(prevResources => prevResources.filter(r => r.id !== resource.id));
     } catch (error) {
       console.error('Delete error:', error);
       toast.error('Failed to delete resource');
@@ -60,6 +113,32 @@ export default function ResourceGrid({ resources, onResourceDeleted }: ResourceG
       setDeletingId(null);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600 dark:text-primary-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-500 dark:text-red-400">{error}</p>
+      </div>
+    );
+  }
+
+  if (!resources.length) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500 dark:text-gray-400">
+          No resources found matching your filters.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -115,32 +194,32 @@ export default function ResourceGrid({ resources, onResourceDeleted }: ResourceG
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500 dark:text-gray-400">Class</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {resource.class}
+                  {resource.classId}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500 dark:text-gray-400">Subject</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {resource.subject}
+                  {resource.subjectId}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500 dark:text-gray-400">Chapter</span>
                 <span className="font-medium text-gray-900 dark:text-white break-words text-right">
-                  {resource.chapter}
+                  {resource.chapterId}
                 </span>
               </div>
-              {resource.book && (
+              {resource.bookId && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500 dark:text-gray-400">Book</span>
                   <span className="font-medium text-gray-900 dark:text-white break-words text-right">
-                    {resource.book}
+                    {resource.bookId}
                   </span>
                 </div>
               )}
             </div>
 
-            {resource.tags.length > 0 && (
+            {resource.tags && resource.tags.length > 0 && (
               <div className="mt-4">
                 <div className="flex flex-wrap gap-2">
                   {resource.tags.map((tag, index) => (

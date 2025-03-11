@@ -64,13 +64,6 @@ export default function MyResources({ isDarkMode, onThemeToggle }: MyResourcesPr
             showOnlyUserResources={true}
           />
         )}
-
-        {/* Empty State */}
-        <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">
-            No resources found matching your filters.
-          </p>
-        </div>
       </div>
     </TeacherLayout>
   );

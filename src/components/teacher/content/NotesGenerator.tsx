@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import BasicSettings from './notes/BasicSettings';
 import NoteTypeSelector from './notes/NoteTypeSelector';
 import AdvancedSettings from './notes/AdvancedSettings';
 import ConfigurationSummary from './notes/ConfigurationSummary';
+
+interface NotesGeneratorProps {
+  isDarkMode: boolean;
+}
 
 const classes = ['Class 10', 'Class 11', 'Class 12'];
 const subjects = {
@@ -25,7 +29,7 @@ const noteTypes = [
   { id: 'theorems-formulas', label: 'Theorems & Formulas' },
 ];
 
-export default function NotesGenerator() {
+export default function NotesGenerator({ isDarkMode }: NotesGeneratorProps) {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedChapters, setSelectedChapters] = useState<string[]>([]);

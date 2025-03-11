@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BasicSettings from './flashcards/BasicSettings';
 import FlashcardTypeSelector from './flashcards/FlashcardTypeSelector';
 import AdvancedSettings from './flashcards/AdvancedSettings';
 import ConfigurationSummary from './flashcards/ConfigurationSummary';
+
+interface FlashcardsGeneratorProps {
+  isDarkMode: boolean;
+}
 
 const classes = ['Class 10', 'Class 11', 'Class 12'];
 const subjects = {
@@ -46,7 +50,7 @@ const flashcardTypes = [
   },
 ];
 
-export default function FlashcardsGenerator() {
+export default function FlashcardsGenerator({ isDarkMode }: FlashcardsGeneratorProps) {
   const navigate = useNavigate();
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');

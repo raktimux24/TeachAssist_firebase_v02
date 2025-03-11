@@ -11,7 +11,7 @@ export default function GenerateQuestionSets({ isDarkMode, onThemeToggle }: Gene
   return (
     <TeacherLayout isDarkMode={isDarkMode} onThemeToggle={onThemeToggle}>
       <div className="py-6">
-        <QuestionSetGenerator />
+        <QuestionSetGenerator isDarkMode={isDarkMode} />
       </div>
     </TeacherLayout>
   );

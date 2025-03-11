@@ -15,6 +15,7 @@ interface QuestionTypeSelectorProps {
   setDifficulty: (difficulty: string) => void;
   includeAnswers: boolean;
   setIncludeAnswers: (include: boolean) => void;
+  isDarkMode?: boolean;
 }
 
 const questionTypesList: QuestionType[] = [
@@ -34,6 +35,7 @@ export default function QuestionTypeSelector({
   setDifficulty,
   includeAnswers,
   setIncludeAnswers,
+  isDarkMode,
 }: QuestionTypeSelectorProps) {
   const totalQuestions = Object.values(questionTypes).reduce((sum, count) => sum + count, 0);
 

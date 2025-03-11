@@ -11,6 +11,7 @@ interface BasicSettingsProps {
   classes: string[];
   subjects: Record<string, string[]>;
   chapters: Record<string, string[]>;
+  isDarkMode?: boolean;
 }
 
 export default function BasicSettings({
@@ -23,6 +24,7 @@ export default function BasicSettings({
   classes,
   subjects,
   chapters,
+  isDarkMode,
 }: BasicSettingsProps) {
   return (
     <div className="space-y-6">
