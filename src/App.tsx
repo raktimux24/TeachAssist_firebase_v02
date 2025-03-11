@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AdminRoute, TeacherRoute, StudentRoute, PublicRoute } from './components/ProtectedRoutes';
 import { useAuth } from './contexts/AuthContext';
+import { FlashcardsProvider } from './context/FlashcardsContext';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Features from './components/Features';
@@ -206,4 +207,10 @@ function App() {
   );
 }
 
-export default App;
+export default function AppWithProviders() {
+  return (
+    <FlashcardsProvider>
+      <App />
+    </FlashcardsProvider>
+  );
+}

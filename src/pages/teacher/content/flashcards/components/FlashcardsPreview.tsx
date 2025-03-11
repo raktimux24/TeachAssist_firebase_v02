@@ -1,53 +1,79 @@
-import React, { useState } from 'react';
-import { CheckCircle, BookOpen, Layout, Grid, ChevronLeft, ChevronRight } from 'lucide-react';
-
-interface Flashcard {
-  id: number;
-  front: string;
-  back: string;
-  type: 'definition' | 'concept' | 'formula' | 'question';
-}
-
-const mockFlashcards = {
-  title: 'Chemical Bonding',
-  subject: 'Chemistry',
-  class: 'Class 11',
-  type: 'Concept-based',
-  cards: [
-    {
-      id: 1,
-      front: 'What is a Chemical Bond?',
-      back: 'A chemical bond is the force of attraction that holds atoms together in a molecule or compound.',
-      type: 'definition'
-    },
-    {
-      id: 2,
-      front: 'Types of Chemical Bonds',
-      back: '1. Ionic Bond\n2. Covalent Bond\n3. Metallic Bond',
-      type: 'concept'
-    },
-    {
-      id: 3,
-      front: 'Bond Energy Formula',
-      back: 'Bond Energy = Energy required to break one mole of bonds in gaseous molecules',
-      type: 'formula'
-    },
-    {
-      id: 4,
-      front: 'Why do atoms form chemical bonds?',
-      back: 'Atoms form chemical bonds to achieve a more stable electron configuration, typically by reaching the electron configuration of the nearest noble gas.',
-      type: 'question'
-    }
-  ]
-};
+import { useState } from 'react';
+import { CheckCircle, BookOpen, Layout, Grid, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { useFlashcards } from '../../../../../context/FlashcardsContext';
 
 export default function FlashcardsPreview() {
+  const { flashcardSet, isGenerating, error } = useFlashcards();
   const [currentCard, setCurrentCard] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [viewMode, setViewMode] = useState<'single' | 'grid'>('single');
 
+  // If still generating, show loading state
+  if (isGenerating) {
+    return (
+      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mb-4"></div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            Generating Flashcards...
+          </h3>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            This may take a minute or two. We're processing your PDF resources.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // If there's an error, show error state
+  if (error) {
+    return (
+      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+        <div className="flex flex-col items-center justify-center py-8">
+          <div className="bg-red-100 dark:bg-red-900/20 p-3 rounded-full mb-4">
+            <AlertTriangle className="h-8 w-8 text-red-500" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            Failed to Generate Flashcards
+          </h3>
+          <p className="mt-2 text-sm text-center text-gray-500 dark:text-gray-400 max-w-md">
+            {error}
+          </p>
+          <button
+            onClick={() => window.history.back()}
+            className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium"
+          >
+            Go Back and Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // If no flashcard set is available, show empty state
+  if (!flashcardSet) {
+    return (
+      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+        <div className="flex flex-col items-center justify-center py-12">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            No Flashcards Available
+          </h3>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Please generate flashcards first.
+          </p>
+          <button
+            onClick={() => window.history.back()}
+            className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium"
+          >
+            Go to Flashcard Generator
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const nextCard = () => {
-    setCurrentCard(prev => Math.min(prev + 1, mockFlashcards.cards.length - 1));
+    setCurrentCard(prev => Math.min(prev + 1, flashcardSet.cards.length - 1));
     setIsFlipped(false);
   };
 
@@ -62,7 +88,7 @@ export default function FlashcardsPreview() {
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {mockFlashcards.title}
+            {flashcardSet.title}
           </h2>
           <div className="flex items-center gap-4">
             <button
@@ -80,15 +106,15 @@ export default function FlashcardsPreview() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-500 dark:text-gray-400">
           <div className="flex items-center">
             <BookOpen className="w-4 h-4 mr-2" />
-            <span>{mockFlashcards.subject} - {mockFlashcards.class}</span>
+            <span>{flashcardSet.subject} - {flashcardSet.class}</span>
           </div>
           <div className="flex items-center">
             <Layout className="w-4 h-4 mr-2" />
-            <span>{mockFlashcards.type}</span>
+            <span>{flashcardSet.type}</span>
           </div>
           <div className="flex items-center">
             <Layout className="w-4 h-4 mr-2" />
-            <span>{mockFlashcards.cards.length} Cards</span>
+            <span>{flashcardSet.cards.length} Cards</span>
           </div>
         </div>
       </div>
@@ -107,7 +133,7 @@ export default function FlashcardsPreview() {
                 <div className={`absolute inset-0 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-8 backface-hidden ${isFlipped ? 'invisible' : ''}`}>
                   <div className="flex flex-col items-center justify-center h-full">
                     <h3 className="text-xl font-medium text-gray-900 dark:text-white text-center">
-                      {mockFlashcards.cards[currentCard].front}
+                      {flashcardSet.cards[currentCard].front}
                     </h3>
                     <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
                       Click to flip
@@ -119,7 +145,7 @@ export default function FlashcardsPreview() {
                 <div className={`absolute inset-0 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-8 backface-hidden rotate-y-180 ${!isFlipped ? 'invisible' : ''}`}>
                   <div className="flex flex-col items-center justify-center h-full">
                     <p className="text-lg text-gray-700 dark:text-gray-300 text-center whitespace-pre-line">
-                      {mockFlashcards.cards[currentCard].back}
+                      {flashcardSet.cards[currentCard].back}
                     </p>
                     <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
                       Click to flip back
@@ -140,11 +166,11 @@ export default function FlashcardsPreview() {
                 Previous
               </button>
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                Card {currentCard + 1} of {mockFlashcards.cards.length}
+                Card {currentCard + 1} of {flashcardSet.cards.length}
               </span>
               <button
                 onClick={nextCard}
-                disabled={currentCard === mockFlashcards.cards.length - 1}
+                disabled={currentCard === flashcardSet.cards.length - 1}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 disabled:opacity-50"
               >
                 Next
@@ -155,7 +181,7 @@ export default function FlashcardsPreview() {
         ) : (
           // Grid View
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockFlashcards.cards.map((card, index) => (
+            {flashcardSet.cards.map((card, index) => (
               <button
                 key={card.id}
                 onClick={() => {
