@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import TeacherLayout from '../../components/teacher/TeacherLayout';
 import ResourcesFilters from '../../components/teacher/resources/ResourcesFilters';
 import ResourcesViewToggle from '../../components/teacher/resources/ResourcesViewToggle';
@@ -15,8 +15,25 @@ export default function MyResources({ isDarkMode, onThemeToggle }: MyResourcesPr
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedSubject, setSelectedSubject] = useState('all');
-  const [selectedType, setSelectedType] = useState('all');
+  const [selectedChapter, setSelectedChapter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+
+  // Handler for class selection that resets subject and chapter if class changes
+  const handleClassChange = (classValue: string) => {
+    setSelectedClass(classValue);
+    if (classValue !== selectedClass) {
+      setSelectedSubject('all');
+      setSelectedChapter('all');
+    }
+  };
+
+  // Handler for subject selection that resets chapter if subject changes
+  const handleSubjectChange = (subject: string) => {
+    setSelectedSubject(subject);
+    if (subject !== selectedSubject) {
+      setSelectedChapter('all');
+    }
+  };
 
   return (
     <TeacherLayout isDarkMode={isDarkMode} onThemeToggle={onThemeToggle}>
@@ -34,11 +51,11 @@ export default function MyResources({ isDarkMode, onThemeToggle }: MyResourcesPr
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               selectedClass={selectedClass}
-              onClassChange={setSelectedClass}
+              onClassChange={handleClassChange}
               selectedSubject={selectedSubject}
-              onSubjectChange={setSelectedSubject}
-              selectedType={selectedType}
-              onTypeChange={setSelectedType}
+              onSubjectChange={handleSubjectChange}
+              selectedChapter={selectedChapter}
+              onChapterChange={setSelectedChapter}
             />
           </div>
           <ResourcesViewToggle
@@ -52,7 +69,7 @@ export default function MyResources({ isDarkMode, onThemeToggle }: MyResourcesPr
             searchQuery={searchQuery}
             selectedClass={selectedClass}
             selectedSubject={selectedSubject}
-            selectedType={selectedType}
+            selectedChapter={selectedChapter}
             showOnlyUserResources={true}
           />
         ) : (
@@ -60,7 +77,7 @@ export default function MyResources({ isDarkMode, onThemeToggle }: MyResourcesPr
             searchQuery={searchQuery}
             selectedClass={selectedClass}
             selectedSubject={selectedSubject}
-            selectedType={selectedType}
+            selectedChapter={selectedChapter}
             showOnlyUserResources={true}
           />
         )}

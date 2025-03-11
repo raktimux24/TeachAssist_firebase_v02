@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react';
-import { AVAILABLE_CLASSES, AVAILABLE_SUBJECTS, AVAILABLE_CHAPTERS } from '../../../constants/resources';
+import { useEffect, useState } from 'react';
+import { fetchChapters, fetchClasses, fetchSubjects } from '../../../firebase/resources';
 
 interface ResourceFiltersProps {
   searchQuery: string;
@@ -22,6 +23,82 @@ export default function ResourceFilters({
   selectedChapter,
   onChapterChange,
 }: ResourceFiltersProps) {
+  const [classes, setClasses] = useState<string[]>([]);
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [chapters, setChapters] = useState<string[]>([]);
+  const [loadingClasses, setLoadingClasses] = useState(false);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [loadingChapters, setLoadingChapters] = useState(false);
+
+  // Fetch classes on component mount
+  useEffect(() => {
+    const loadClasses = async () => {
+      setLoadingClasses(true);
+      try {
+        const classesData = await fetchClasses();
+        setClasses(classesData);
+      } catch (error) {
+        console.error('Error loading classes:', error);
+        setClasses([]);
+      } finally {
+        setLoadingClasses(false);
+      }
+    };
+
+    loadClasses();
+  }, []);
+
+  // Fetch subjects when class changes
+  useEffect(() => {
+    const loadSubjects = async () => {
+      setLoadingSubjects(true);
+      try {
+        const subjectsData = await fetchSubjects(selectedClass);
+        setSubjects(subjectsData);
+        
+        // Reset subject selection if the current selection is not in the new list
+        if (selectedSubject !== 'all' && !subjectsData.includes(selectedSubject)) {
+          onSubjectChange('all');
+        }
+      } catch (error) {
+        console.error('Error loading subjects:', error);
+        setSubjects([]);
+      } finally {
+        setLoadingSubjects(false);
+      }
+    };
+
+    loadSubjects();
+  }, [selectedClass, selectedSubject, onSubjectChange]);
+
+  // Fetch chapters when class or subject changes
+  useEffect(() => {
+    const loadChapters = async () => {
+      if (selectedClass === 'all' || selectedSubject === 'all') {
+        setChapters([]);
+        return;
+      }
+
+      setLoadingChapters(true);
+      try {
+        const chaptersData = await fetchChapters(selectedClass, selectedSubject);
+        setChapters(chaptersData);
+        
+        // Reset chapter selection if the current selection is not in the new list
+        if (selectedChapter && selectedChapter !== 'all' && !chaptersData.includes(selectedChapter) && onChapterChange) {
+          onChapterChange('all');
+        }
+      } catch (error) {
+        console.error('Error loading chapters:', error);
+        setChapters([]);
+      } finally {
+        setLoadingChapters(false);
+      }
+    };
+
+    loadChapters();
+  }, [selectedClass, selectedSubject, selectedChapter, onChapterChange]);
+
   return (
     <div className="flex flex-col sm:flex-row gap-4 flex-1">
       {/* Search Input */}
@@ -44,24 +121,34 @@ export default function ResourceFilters({
         <select
           value={selectedClass}
           onChange={(e) => onClassChange(e.target.value)}
-          className="block w-full sm:w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+          disabled={loadingClasses}
+          className="block w-full sm:w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm disabled:opacity-70 disabled:cursor-not-allowed"
         >
           <option value="all">All Classes</option>
-          {AVAILABLE_CLASSES.map((cls: string) => (
-            <option key={cls} value={cls}>Class {cls}</option>
-          ))}
+          {loadingClasses ? (
+            <option value="" disabled>Loading...</option>
+          ) : (
+            classes.map((cls) => (
+              <option key={cls} value={cls}>Class {cls}</option>
+            ))
+          )}
         </select>
 
         {/* Subject Filter */}
         <select
           value={selectedSubject}
           onChange={(e) => onSubjectChange(e.target.value)}
-          className="block w-full sm:w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+          disabled={loadingSubjects || selectedClass === 'all'}
+          className="block w-full sm:w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm disabled:opacity-70 disabled:cursor-not-allowed"
         >
           <option value="all">All Subjects</option>
-          {AVAILABLE_SUBJECTS.map((subject: string) => (
-            <option key={subject} value={subject}>{subject}</option>
-          ))}
+          {loadingSubjects ? (
+            <option value="" disabled>Loading...</option>
+          ) : (
+            subjects.map((subject) => (
+              <option key={subject} value={subject}>{subject}</option>
+            ))
+          )}
         </select>
 
         {/* Chapter Filter */}
@@ -69,12 +156,17 @@ export default function ResourceFilters({
           <select
             value={selectedChapter || 'all'}
             onChange={(e) => onChapterChange(e.target.value)}
-            className="block w-full sm:w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+            disabled={loadingChapters || selectedClass === 'all' || selectedSubject === 'all'}
+            className="block w-full sm:w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm disabled:opacity-70 disabled:cursor-not-allowed"
           >
             <option value="all">All Chapters</option>
-            {AVAILABLE_CHAPTERS.map((chapter: string) => (
-              <option key={chapter} value={chapter}>{chapter}</option>
-            ))}
+            {loadingChapters ? (
+              <option value="" disabled>Loading...</option>
+            ) : (
+              chapters.map((chapter) => (
+                <option key={chapter} value={chapter}>{chapter}</option>
+              ))
+            )}
           </select>
         )}
       </div>

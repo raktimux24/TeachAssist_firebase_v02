@@ -109,30 +109,40 @@ export const fetchResources = async (filters: {
   chapter?: string;
 }) => {
   try {
+    console.log('fetchResources: Starting with filters:', filters);
     let q = query(collection(db, 'resources'), orderBy('createdAt', 'desc'));
+    console.log('fetchResources: Initial query created with orderBy createdAt desc');
     
     // Apply filters
     if (filters.class && filters.class !== 'all') {
+      console.log('fetchResources: Adding class filter:', filters.class);
       q = query(q, where('class', '==', filters.class));
     }
     
     if (filters.subject && filters.subject !== 'all') {
+      console.log('fetchResources: Adding subject filter:', filters.subject);
       q = query(q, where('subject', '==', filters.subject));
     }
     
     if (filters.book && filters.book !== 'all') {
+      console.log('fetchResources: Adding book filter:', filters.book);
       q = query(q, where('book', '==', filters.book));
     }
     
     if (filters.chapter && filters.chapter !== 'all') {
+      console.log('fetchResources: Adding chapter filter:', filters.chapter);
       q = query(q, where('chapter', '==', filters.chapter));
     }
 
+    console.log('fetchResources: Executing query to Firestore');
     const querySnapshot = await getDocs(q);
+    console.log('fetchResources: Query completed, document count:', querySnapshot.size);
+    
     const resources: Resource[] = [];
     
     querySnapshot.forEach((doc) => {
       const data = doc.data();
+      
       // Apply search filter if provided
       if (filters.searchQuery) {
         const searchLower = filters.searchQuery.toLowerCase();
@@ -141,6 +151,7 @@ export const fetchResources = async (filters: {
         const tagsMatch = data.tags.some((tag: string) => tag.toLowerCase().includes(searchLower));
         
         if (!titleMatch && !descriptionMatch && !tagsMatch) {
+          console.log('fetchResources: Skipping document that does not match search query:', data.title);
           return;
         }
       }
@@ -153,9 +164,131 @@ export const fetchResources = async (filters: {
       } as Resource);
     });
 
+    console.log('fetchResources: Final resources count:', resources.length);
+    console.log('fetchResources: Resource uploadedBy values:', resources.map(r => r.uploadedBy));
+    
     return resources;
   } catch (error) {
     console.error('Error fetching resources:', error);
     throw error;
   }
 }; 
+
+// Fetch chapters based on class and subject
+export const fetchChapters = async (classId: string, subjectId: string): Promise<string[]> => {
+  try {
+    console.log('fetchChapters: Starting with class:', classId, 'subject:', subjectId);
+    
+    if (classId === 'all' || subjectId === 'all') {
+      console.log('fetchChapters: Class or subject is "all", returning empty array');
+      return [];
+    }
+    
+    // Query resources collection to get unique chapters for the given class and subject
+    const q = query(
+      collection(db, 'resources'),
+      where('class', '==', classId),
+      where('subject', '==', subjectId)
+    );
+    
+    console.log('fetchChapters: Executing query to Firestore');
+    const querySnapshot = await getDocs(q);
+    console.log('fetchChapters: Query completed, document count:', querySnapshot.size);
+    
+    // Extract unique chapters from the results
+    const chaptersSet = new Set<string>();
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.chapter) {
+        chaptersSet.add(data.chapter);
+      }
+    });
+    
+    const chapters = Array.from(chaptersSet).sort();
+    console.log('fetchChapters: Found chapters:', chapters);
+    
+    return chapters;
+  } catch (error) {
+    console.error('Error fetching chapters:', error);
+    return [];
+  }
+};
+
+// Fetch all available classes from resources collection
+export const fetchClasses = async (): Promise<string[]> => {
+  try {
+    console.log('fetchClasses: Starting to fetch classes');
+    
+    // Query resources collection to get all documents
+    const q = query(collection(db, 'resources'));
+    
+    console.log('fetchClasses: Executing query to Firestore');
+    const querySnapshot = await getDocs(q);
+    console.log('fetchClasses: Query completed, document count:', querySnapshot.size);
+    
+    // Extract unique classes from the results
+    const classesSet = new Set<string>();
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.class) {
+        classesSet.add(data.class);
+      }
+    });
+    
+    const classes = Array.from(classesSet).sort((a, b) => {
+      // Sort numerically
+      return parseInt(a) - parseInt(b);
+    });
+    
+    console.log('fetchClasses: Found classes:', classes);
+    
+    return classes;
+  } catch (error) {
+    console.error('Error fetching classes:', error);
+    return [];
+  }
+};
+
+// Fetch subjects based on class selection
+export const fetchSubjects = async (classId: string): Promise<string[]> => {
+  try {
+    console.log('fetchSubjects: Starting with class:', classId);
+    
+    let q;
+    
+    if (classId === 'all') {
+      // If no class is selected, get all subjects
+      q = query(collection(db, 'resources'));
+    } else {
+      // If class is selected, filter by class
+      q = query(
+        collection(db, 'resources'),
+        where('class', '==', classId)
+      );
+    }
+    
+    console.log('fetchSubjects: Executing query to Firestore');
+    const querySnapshot = await getDocs(q);
+    console.log('fetchSubjects: Query completed, document count:', querySnapshot.size);
+    
+    // Extract unique subjects from the results
+    const subjectsSet = new Set<string>();
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.subject) {
+        subjectsSet.add(data.subject);
+      }
+    });
+    
+    const subjects = Array.from(subjectsSet).sort();
+    console.log('fetchSubjects: Found subjects:', subjects);
+    
+    return subjects;
+  } catch (error) {
+    console.error('Error fetching subjects:', error);
+    return [];
+  }
+};

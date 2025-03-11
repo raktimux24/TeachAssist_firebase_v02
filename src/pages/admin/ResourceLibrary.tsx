@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Resource } from '../../types/resource';
 import AdminLayout from '../../components/admin/AdminLayout';
 import ResourceGrid from '../../components/admin/resources/ResourceGrid';
 import ResourceTable from '../../components/admin/resources/ResourceTable';
 import ResourceFilters from '../../components/admin/resources/ResourceFilters';
 import ResourceActionPanel from '../../components/admin/resources/ResourceActionPanel';
-import { fetchResources } from '../../firebase/resources';
 import { GridIcon, ViewIcon } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ResourceLibraryProps {
   isDarkMode: boolean;
@@ -20,33 +18,34 @@ export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceL
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedChapter, setSelectedChapter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { currentUser, userInfo } = useAuth();
 
-  const loadResources = async () => {
-    try {
-      setLoading(true);
-      const fetchedResources = await fetchResources({
-        searchQuery,
-        class: selectedClass,
-        subject: selectedSubject,
-        chapter: selectedChapter
-      });
-      setResources(fetchedResources);
-    } catch (error) {
-      console.error('Error loading resources:', error);
-      toast.error('Failed to load resources');
-    } finally {
-      setLoading(false);
+  // Handler for class selection that resets subject and chapter if class changes
+  const handleClassChange = (classValue: string) => {
+    setSelectedClass(classValue);
+    if (classValue !== selectedClass) {
+      setSelectedSubject('all');
+      setSelectedChapter('all');
     }
   };
 
+  // Handler for subject selection that resets chapter if subject changes
+  const handleSubjectChange = (subject: string) => {
+    setSelectedSubject(subject);
+    if (subject !== selectedSubject) {
+      setSelectedChapter('all');
+    }
+  };
+
+  // Log component render and user info
   useEffect(() => {
-    loadResources();
-  }, [searchQuery, selectedClass, selectedSubject, selectedChapter]);
+    console.log('ResourceLibrary: Component rendered');
+    console.log('ResourceLibrary: Current user:', currentUser?.uid);
+    console.log('ResourceLibrary: User info:', userInfo);
+  }, [currentUser, userInfo]);
 
   const handleResourceDeleted = () => {
-    loadResources();
+    console.log('ResourceLibrary: Resource deleted callback triggered');
   };
 
   return (
@@ -65,16 +64,19 @@ export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceL
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               selectedClass={selectedClass}
-              onClassChange={setSelectedClass}
+              onClassChange={handleClassChange}
               selectedSubject={selectedSubject}
-              onSubjectChange={setSelectedSubject}
+              onSubjectChange={handleSubjectChange}
               selectedChapter={selectedChapter}
               onChapterChange={setSelectedChapter}
             />
             
             <div className="flex items-center space-x-2 ml-4">
               <button
-                onClick={() => setViewMode('grid')}
+                onClick={() => {
+                  console.log('ResourceLibrary: Switching to grid view');
+                  setViewMode('grid');
+                }}
                 className={`p-2 rounded-md ${
                   viewMode === 'grid'
                     ? 'bg-gray-100 dark:bg-gray-700 text-primary-600 dark:text-primary-400'
@@ -84,7 +86,10 @@ export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceL
                 <GridIcon className="w-5 h-5" />
               </button>
               <button
-                onClick={() => setViewMode('table')}
+                onClick={() => {
+                  console.log('ResourceLibrary: Switching to table view');
+                  setViewMode('table');
+                }}
                 className={`p-2 rounded-md ${
                   viewMode === 'table'
                     ? 'bg-gray-100 dark:bg-gray-700 text-primary-600 dark:text-primary-400'
@@ -96,20 +101,28 @@ export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceL
             </div>
           </div>
 
-          {loading && viewMode === 'table' ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            </div>
-          ) : viewMode === 'grid' ? (
+          <div style={{ display: 'none' }}>
+            {console.log('ResourceLibrary: Rendering with viewMode:', viewMode, 'showOnlyUserResources: false')}
+          </div>
+          
+          {viewMode === 'grid' ? (
             <ResourceGrid 
               searchQuery={searchQuery}
               selectedClass={selectedClass}
               selectedSubject={selectedSubject}
               selectedType={selectedChapter}
+              showOnlyUserResources={false}
               onResourceDeleted={handleResourceDeleted} 
             />
           ) : (
-            <ResourceTable resources={resources} onResourceDeleted={handleResourceDeleted} />
+            <ResourceTable 
+              searchQuery={searchQuery}
+              selectedClass={selectedClass}
+              selectedSubject={selectedSubject}
+              selectedType={selectedChapter}
+              showOnlyUserResources={false}
+              onResourceDeleted={handleResourceDeleted}
+            />
           )}
         </div>
       </div>

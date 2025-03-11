@@ -10,7 +10,7 @@ interface ResourceGridProps {
   searchQuery?: string;
   selectedClass?: string;
   selectedSubject?: string;
-  selectedType?: string;
+  selectedChapter?: string;
   showOnlyUserResources?: boolean;
   onResourceDeleted?: () => void;
 }
@@ -19,7 +19,7 @@ export default function ResourceGrid({
   searchQuery = '', 
   selectedClass = 'all', 
   selectedSubject = 'all', 
-  selectedType = 'all',
+  selectedChapter = 'all',
   showOnlyUserResources = false,
   onResourceDeleted 
 }: ResourceGridProps) {
@@ -35,22 +35,52 @@ export default function ResourceGrid({
       try {
         setLoading(true);
         setError(null);
-        const fetchedResources = await fetchResources({
+        
+        // Format class value for database query (remove "Class " prefix)
+        const formattedClass = selectedClass === 'all' ? 'all' : selectedClass.replace('Class ', '');
+        
+        console.log('ResourceGrid: Fetching resources with filters:', {
           searchQuery,
           class: selectedClass,
+          formattedClass,
           subject: selectedSubject,
-          chapter: selectedType
+          chapter: selectedChapter,
+          showOnlyUserResources
         });
+        
+        const fetchedResources = await fetchResources({
+          searchQuery,
+          class: formattedClass,
+          subject: selectedSubject,
+          chapter: selectedChapter
+        });
+        
+        console.log('ResourceGrid: Fetched resources count:', fetchedResources.length);
+        console.log('ResourceGrid: First few resources:', fetchedResources.slice(0, 3));
+        
+        // Log all resources with their uploadedBy field
+        console.log('ResourceGrid: All resources uploadedBy values:', 
+          fetchedResources.map(r => ({ 
+            id: r.id, 
+            title: r.title, 
+            uploadedBy: r.uploadedBy 
+          }))
+        );
         
         let filteredResources = fetchedResources;
 
         // Filter by user if showOnlyUserResources is true
         if (showOnlyUserResources && currentUser) {
+          console.log('ResourceGrid: Filtering by current user:', currentUser.uid);
           filteredResources = filteredResources.filter(
             (resource: Resource) => resource.uploadedBy === currentUser.uid
           );
+          console.log('ResourceGrid: After user filtering, resources count:', filteredResources.length);
+        } else {
+          console.log('ResourceGrid: Not filtering by user, showing all resources');
         }
 
+        console.log('ResourceGrid: Final resources being displayed:', filteredResources);
         setResources(filteredResources);
       } catch (err) {
         console.error('Error loading resources:', err);
@@ -61,7 +91,7 @@ export default function ResourceGrid({
     };
 
     loadResources();
-  }, [searchQuery, selectedClass, selectedSubject, selectedType, showOnlyUserResources, currentUser]);
+  }, [searchQuery, selectedClass, selectedSubject, selectedChapter, showOnlyUserResources, currentUser]);
 
   const handleDownload = async (resource: Resource) => {
     if (!resource.id || !resource.fileUrl) return;

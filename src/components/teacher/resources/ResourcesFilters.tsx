@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter } from 'lucide-react';
+import { fetchChapters, fetchClasses, fetchSubjects } from '../../../firebase/resources';
 
 interface ResourcesFiltersProps {
   searchQuery: string;
@@ -8,13 +9,15 @@ interface ResourcesFiltersProps {
   onClassChange: (classLevel: string) => void;
   selectedSubject: string;
   onSubjectChange: (subject: string) => void;
-  selectedType: string;
-  onTypeChange: (type: string) => void;
+  selectedChapter: string;
+  onChapterChange: (chapter: string) => void;
 }
 
-const classes = ['all', 'Class 10', 'Class 11', 'Class 12'];
-const subjects = ['all', 'Mathematics', 'Physics', 'Chemistry', 'Biology'];
-const types = ['all', 'Document', 'Presentation', 'Worksheet', 'Video'];
+// Format class strings for database query (e.g., "Class 10" -> "10")
+const formatClassForQuery = (classValue: string): string => {
+  if (classValue === 'all') return 'all';
+  return classValue.replace('Class ', '');
+};
 
 export default function ResourcesFilters({
   searchQuery,
@@ -23,10 +26,89 @@ export default function ResourcesFilters({
   onClassChange,
   selectedSubject,
   onSubjectChange,
-  selectedType,
-  onTypeChange,
+  selectedChapter,
+  onChapterChange,
 }: ResourcesFiltersProps) {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [classes, setClasses] = useState<string[]>([]);
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [chapters, setChapters] = useState<string[]>([]);
+  const [loadingClasses, setLoadingClasses] = useState(false);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [loadingChapters, setLoadingChapters] = useState(false);
+
+  // Fetch classes on component mount
+  useEffect(() => {
+    const loadClasses = async () => {
+      setLoadingClasses(true);
+      try {
+        const classesData = await fetchClasses();
+        setClasses(classesData);
+      } catch (error) {
+        console.error('Error loading classes:', error);
+        setClasses([]);
+      } finally {
+        setLoadingClasses(false);
+      }
+    };
+
+    loadClasses();
+  }, []);
+
+  // Fetch subjects when class changes
+  useEffect(() => {
+    const loadSubjects = async () => {
+      setLoadingSubjects(true);
+      try {
+        // Convert "Class X" format to just "X" for the database query
+        const classValue = formatClassForQuery(selectedClass);
+        const subjectsData = await fetchSubjects(classValue);
+        setSubjects(subjectsData);
+        
+        // Reset subject selection if the current selection is not in the new list
+        if (selectedSubject !== 'all' && !subjectsData.includes(selectedSubject)) {
+          onSubjectChange('all');
+        }
+      } catch (error) {
+        console.error('Error loading subjects:', error);
+        setSubjects([]);
+      } finally {
+        setLoadingSubjects(false);
+      }
+    };
+
+    loadSubjects();
+  }, [selectedClass, selectedSubject, onSubjectChange]);
+
+  // Fetch chapters when class or subject changes
+  useEffect(() => {
+    const loadChapters = async () => {
+      if (selectedClass === 'all' || selectedSubject === 'all') {
+        setChapters([]);
+        return;
+      }
+
+      setLoadingChapters(true);
+      try {
+        // Convert "Class X" format to just "X" for the database query
+        const classValue = formatClassForQuery(selectedClass);
+        const chaptersData = await fetchChapters(classValue, selectedSubject);
+        setChapters(chaptersData);
+        
+        // Reset chapter selection if the current selection is not in the new list
+        if (selectedChapter !== 'all' && !chaptersData.includes(selectedChapter)) {
+          onChapterChange('all');
+        }
+      } catch (error) {
+        console.error('Error loading chapters:', error);
+        setChapters([]);
+      } finally {
+        setLoadingChapters(false);
+      }
+    };
+
+    loadChapters();
+  }, [selectedClass, selectedSubject, selectedChapter, onChapterChange]);
 
   return (
     <div className="w-full bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow-sm ring-1 ring-gray-900/5">
@@ -59,39 +141,55 @@ export default function ResourcesFilters({
           <select
             value={selectedClass}
             onChange={(e) => onClassChange(e.target.value)}
-            className="block w-full pl-3 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none"
+            disabled={loadingClasses}
+            className="block w-full pl-3 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {classes.map((cls) => (
-              <option key={cls} value={cls}>
-                {cls === 'all' ? 'All Classes' : cls}
-              </option>
-            ))}
+            <option value="all">All Classes</option>
+            {loadingClasses ? (
+              <option value="" disabled>Loading...</option>
+            ) : (
+              classes.map((cls) => (
+                <option key={cls} value={`Class ${cls}`}>
+                  {`Class ${cls}`}
+                </option>
+              ))
+            )}
           </select>
 
           {/* Subject Filter */}
           <select
             value={selectedSubject}
             onChange={(e) => onSubjectChange(e.target.value)}
-            className="block w-full pl-3 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none"
+            disabled={loadingSubjects || selectedClass === 'all'}
+            className="block w-full pl-3 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {subjects.map((subject) => (
-              <option key={subject} value={subject}>
-                {subject === 'all' ? 'All Subjects' : subject}
-              </option>
-            ))}
+            <option value="all">All Subjects</option>
+            {loadingSubjects ? (
+              <option value="" disabled>Loading...</option>
+            ) : (
+              subjects.map((subject) => (
+                <option key={subject} value={subject}>
+                  {subject}
+                </option>
+              ))
+            )}
           </select>
 
-          {/* Type Filter */}
+          {/* Chapter Filter */}
           <select
-            value={selectedType}
-            onChange={(e) => onTypeChange(e.target.value)}
-            className="block w-full pl-3 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none"
+            value={selectedChapter}
+            onChange={(e) => onChapterChange(e.target.value)}
+            disabled={loadingChapters || selectedClass === 'all' || selectedSubject === 'all'}
+            className="block w-full pl-3 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {types.map((type) => (
-              <option key={type} value={type}>
-                {type === 'all' ? 'All Types' : type}
-              </option>
-            ))}
+            <option value="all">All Chapters</option>
+            {loadingChapters ? (
+              <option value="" disabled>Loading...</option>
+            ) : (
+              chapters.map((chapter) => (
+                <option key={chapter} value={chapter}>{chapter}</option>
+              ))
+            )}
           </select>
         </div>
       </div>

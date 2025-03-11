@@ -6,7 +6,6 @@ import {
   FileText,
   PenTool,
   GraduationCap,
-  Settings,
   X
 } from 'lucide-react';
 
@@ -15,7 +14,6 @@ const navigation = [
   { name: 'Content Generation', href: '/teacher/content', icon: PenTool },
   { name: 'Lesson Plans', href: '/teacher/lessons', icon: BookOpen },
   { name: 'My Resources', href: '/teacher/resources', icon: FileText },
-  { name: 'Settings', href: '/teacher/settings', icon: Settings },
 ];
 
 interface TeacherSidebarProps {
