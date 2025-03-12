@@ -1,0 +1,42 @@
+/* CSS fallbacks for presentation template backgrounds */
+
+.modern-bg {
+  background: linear-gradient(135deg, #a5c7e9 0%, #d9a7c7 100%);
+}
+
+.academic-bg {
+  background: linear-gradient(135deg, #f8d8c9 0%, #f9e2d2 100%);
+}
+
+.creative-bg {
+  background: #f9e9e0;
+  position: relative;
+}
+
+.creative-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath fill='%23a69076' d='M20,10 C25,15 30,10 35,15 C40,20 35,25 40,30 C45,35 40,40 45,45 C50,50 45,55 50,60'/%3E%3C/svg%3E");
+  background-size: 150px;
+  background-repeat: no-repeat;
+  background-position: left top, right bottom;
+  opacity: 0.5;
+}
+
+.creative-bg::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath fill='%23a69076' d='M80,90 C75,85 70,90 65,85 C60,80 65,75 60,70 C55,65 60,60 55,55 C50,50 55,45 50,40'/%3E%3C/svg%3E");
+  background-size: 150px;
+  background-repeat: no-repeat;
+  background-position: right bottom;
+  opacity: 0.5;
+}

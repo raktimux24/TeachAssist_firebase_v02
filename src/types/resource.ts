@@ -1,23 +1,24 @@
 export interface Resource {
-  id?: string;
+  id: string;
   title: string;
   description: string;
   fileUrl: string;
   fileName: string;
   fileType: string;
-  fileSize: number;
-  classId: string;
-  subjectId: string;
-  bookId: string;
-  chapterId: string;
-  // Add the new field names used in fetchResources
-  class?: string;
-  subject?: string;
+  fileSize?: number;
+  classId?: string;
+  subjectId?: string;
+  bookId?: string;
+  chapterId?: string;
+  // Fields used in the application
+  class: string;
+  subject: string;
   book?: string;
   chapter?: string;
-  tags: string[];
-  uploadedBy: string;
-  uploadedByName: string;
+  tags?: string[];
+  uploadedBy?: string;
+  uploadedByName?: string;
+  userId?: string;
   createdAt: any;
   updatedAt: any;
 }

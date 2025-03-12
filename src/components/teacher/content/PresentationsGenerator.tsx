@@ -1,26 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 import BasicSettings from './presentations/BasicSettings';
 import PresentationTypeSelector from './presentations/PresentationTypeSelector';
 import AdvancedSettings from './presentations/AdvancedSettings';
 import ConfigurationSummary from './presentations/ConfigurationSummary';
+import { fetchClasses, fetchSubjects, fetchChapters, fetchResourcesByChapters } from '../../../firebase/resources';
+import { generatePresentation, testOpenAIConnection, PresentationGenerationOptions } from '../../../services/presentationService';
+import { Resource } from '../../../types/resource';
 
 interface PresentationsGeneratorProps {
   isDarkMode: boolean;
 }
-
-const classes = ['Class 10', 'Class 11', 'Class 12'];
-const subjects = {
-  'Class 10': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-  'Class 11': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-  'Class 12': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-};
-const chapters = {
-  Mathematics: ['Algebra', 'Geometry', 'Calculus'],
-  Physics: ['Mechanics', 'Thermodynamics', 'Optics'],
-  Chemistry: ['Organic Chemistry', 'Inorganic Chemistry', 'Physical Chemistry'],
-  Biology: ['Cell Biology', 'Genetics', 'Evolution'],
-};
 
 const presentationTypes = [
   {
@@ -57,6 +48,7 @@ const presentationTypes = [
 
 export default function PresentationsGenerator({ isDarkMode }: PresentationsGeneratorProps) {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
@@ -64,21 +56,172 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
   const [slideCount, setSlideCount] = useState(20);
   const [designTemplate, setDesignTemplate] = useState('modern');
   const [additionalInstructions, setAdditionalInstructions] = useState('');
+  
+  // State for storing data from the database
+  const [classes, setClasses] = useState<string[]>([]);
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [chapters, setChapters] = useState<string[]>([]);
+  const [loading, setLoading] = useState({
+    classes: false,
+    subjects: false,
+    chapters: false
+  });
+  const [error, setError] = useState({
+    classes: '',
+    subjects: '',
+    chapters: ''
+  });
+  const [generatingPresentation, setGeneratingPresentation] = useState(false);
+  const [generationError, setGenerationError] = useState('');
 
-  const handleGenerate = () => {
-    // Log the configuration (you can replace this with actual API call later)
-    console.log('Presentation configuration:', {
-      class: selectedClass,
-      subject: selectedSubject,
-      chapters: selectedChapters,
-      presentationType,
-      slideCount,
-      designTemplate,
-      additionalInstructions,
-    });
+  // Fetch classes on component mount
+  useEffect(() => {
+    const getClasses = async () => {
+      try {
+        setLoading(prev => ({ ...prev, classes: true }));
+        setError(prev => ({ ...prev, classes: '' }));
+        
+        const classesData = await fetchClasses();
+        setClasses(classesData);
+      } catch (err) {
+        console.error('Error fetching classes:', err);
+        setError(prev => ({ ...prev, classes: 'Failed to load classes' }));
+      } finally {
+        setLoading(prev => ({ ...prev, classes: false }));
+      }
+    };
     
-    // Navigate to the results page
-    navigate('/teacher/content/presentations/results');
+    getClasses();
+  }, []);
+
+  // Fetch subjects when a class is selected
+  useEffect(() => {
+    const getSubjects = async () => {
+      if (!selectedClass) {
+        setSubjects([]);
+        return;
+      }
+      
+      try {
+        setLoading(prev => ({ ...prev, subjects: true }));
+        setError(prev => ({ ...prev, subjects: '' }));
+        
+        const subjectsData = await fetchSubjects(selectedClass);
+        setSubjects(subjectsData);
+      } catch (err) {
+        console.error('Error fetching subjects:', err);
+        setError(prev => ({ ...prev, subjects: 'Failed to load subjects' }));
+      } finally {
+        setLoading(prev => ({ ...prev, subjects: false }));
+      }
+    };
+    
+    getSubjects();
+  }, [selectedClass]);
+
+  // Fetch chapters when a subject is selected
+  useEffect(() => {
+    const getChapters = async () => {
+      if (!selectedClass || !selectedSubject) {
+        setChapters([]);
+        return;
+      }
+      
+      try {
+        setLoading(prev => ({ ...prev, chapters: true }));
+        setError(prev => ({ ...prev, chapters: '' }));
+        
+        const chaptersData = await fetchChapters(selectedClass, selectedSubject);
+        setChapters(chaptersData);
+      } catch (err) {
+        console.error('Error fetching chapters:', err);
+        setError(prev => ({ ...prev, chapters: 'Failed to load chapters' }));
+      } finally {
+        setLoading(prev => ({ ...prev, chapters: false }));
+      }
+    };
+    
+    getChapters();
+  }, [selectedClass, selectedSubject]);
+
+  const handleGenerate = async () => {
+    // Validate inputs
+    if (!selectedClass || !selectedSubject || selectedChapters.length === 0) {
+      setGenerationError('Please select class, subject, and at least one chapter');
+      return;
+    }
+    
+    try {
+      setGeneratingPresentation(true);
+      setGenerationError('');
+      
+      // Log the configuration
+      console.log('Presentation configuration:', {
+        class: selectedClass,
+        subject: selectedSubject,
+        chapters: selectedChapters,
+        presentationType,
+        slideCount,
+        designTemplate,
+        additionalInstructions,
+        userId: currentUser?.uid,
+      });
+      
+      // Test OpenAI API connection first
+      console.log('Testing OpenAI API connection...');
+      const isConnected = await testOpenAIConnection();
+      if (!isConnected) {
+        console.error('OpenAI API connection test failed');
+        setGenerationError('Failed to connect to OpenAI API. Please check your API key and try again.');
+        return;
+      }
+      
+      // Fetch resources for the selected chapters
+      console.log('Fetching resources for selected chapters...');
+      const resources: Resource[] = await fetchResourcesByChapters(selectedClass, selectedSubject, selectedChapters);
+      
+      if (resources.length === 0) {
+        console.warn('No resources found for the selected chapters');
+      }
+      
+      // Prepare options for presentation generation
+      const options: PresentationGenerationOptions = {
+        class: selectedClass,
+        subject: selectedSubject,
+        chapters: selectedChapters,
+        presentationType,
+        slideCount,
+        designTemplate,
+        additionalInstructions,
+        resources
+      };
+      
+      // Generate the presentation
+      console.log('Generating presentation with options:', options);
+      const presentation = await generatePresentation(options);
+      
+      // Save the generated presentation and options to sessionStorage
+      console.log('Saving presentation to sessionStorage');
+      sessionStorage.setItem('generatedPresentation', JSON.stringify(presentation));
+      sessionStorage.setItem('presentationGenerationOptions', JSON.stringify({
+        class: selectedClass,
+        subject: selectedSubject,
+        chapters: selectedChapters,
+        presentationType,
+        slideCount,
+        designTemplate,
+        additionalInstructions,
+        timestamp: new Date().toISOString()
+      }));
+      
+      // Navigate to the results page
+      navigate('/teacher/content/presentations/results');
+    } catch (error) {
+      console.error('Error generating presentation:', error);
+      setGenerationError(error instanceof Error ? error.message : 'An unknown error occurred');
+    } finally {
+      setGeneratingPresentation(false);
+    }
   };
 
   return (
@@ -104,6 +247,8 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
             classes={classes}
             subjects={subjects}
             chapters={chapters}
+            loading={loading}
+            error={error}
             isDarkMode={isDarkMode}
           />
 
@@ -134,15 +279,31 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
             isDarkMode={isDarkMode}
           />
 
-          <div className="flex justify-end">
+          <div className="mt-8 flex items-center justify-between">
+            <button
+              onClick={() => navigate('/teacher/content')}
+              className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white"
+            >
+              Cancel
+            </button>
             <button
               onClick={handleGenerate}
-              disabled={!selectedClass || !selectedSubject || selectedChapters.length === 0}
-              className="px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!selectedClass || !selectedSubject || selectedChapters.length === 0 || generatingPresentation}
+              className={`px-6 py-2 rounded-lg text-white ${
+                !selectedClass || !selectedSubject || selectedChapters.length === 0 || generatingPresentation
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-primary-600 hover:bg-primary-700'
+              }`}
             >
-              Generate Presentation
+              {generatingPresentation ? 'Generating...' : 'Generate Presentation'}
             </button>
           </div>
+          
+          {generationError && (
+            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-700 dark:text-red-300">
+              <p>{generationError}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

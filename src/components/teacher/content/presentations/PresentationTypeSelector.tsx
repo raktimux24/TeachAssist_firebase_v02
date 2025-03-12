@@ -11,12 +11,14 @@ interface PresentationTypeSelectorProps {
   presentationTypes: PresentationType[];
   selectedType: string;
   onTypeChange: (type: string) => void;
+  isDarkMode: boolean;
 }
 
 export default function PresentationTypeSelector({
   presentationTypes,
   selectedType,
   onTypeChange,
+  isDarkMode,
 }: PresentationTypeSelectorProps) {
   return (
     <div>

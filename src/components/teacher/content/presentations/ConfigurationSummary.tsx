@@ -8,6 +8,7 @@ interface ConfigurationSummaryProps {
   presentationType: string;
   slideCount: number;
   designTemplate: string;
+  isDarkMode: boolean;
 }
 
 export default function ConfigurationSummary({
@@ -17,6 +18,7 @@ export default function ConfigurationSummary({
   presentationType,
   slideCount,
   designTemplate,
+  isDarkMode,
 }: ConfigurationSummaryProps) {
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 pt-6">

@@ -253,42 +253,103 @@ export const fetchClasses = async (): Promise<string[]> => {
 
 // Fetch subjects based on class selection
 export const fetchSubjects = async (classId: string): Promise<string[]> => {
+  console.log('fetchSubjects: Starting with class:', classId);
+  
+  if (!classId) {
+    console.warn('fetchSubjects: No class ID provided');
+    return [];
+  }
+  
   try {
-    console.log('fetchSubjects: Starting with class:', classId);
-    
-    let q;
-    
-    if (classId === 'all') {
-      // If no class is selected, get all subjects
-      q = query(collection(db, 'resources'));
-    } else {
-      // If class is selected, filter by class
-      q = query(
-        collection(db, 'resources'),
-        where('class', '==', classId)
-      );
-    }
+    const resourcesRef = collection(db, 'resources');
+    const q = query(
+      resourcesRef,
+      where('class', '==', classId)
+    );
     
     console.log('fetchSubjects: Executing query to Firestore');
     const querySnapshot = await getDocs(q);
     console.log('fetchSubjects: Query completed, document count:', querySnapshot.size);
     
-    // Extract unique subjects from the results
-    const subjectsSet = new Set<string>();
-    
+    // Extract unique subjects
+    const subjects = new Set<string>();
     querySnapshot.forEach((doc) => {
       const data = doc.data();
       if (data.subject) {
-        subjectsSet.add(data.subject);
+        subjects.add(data.subject);
       }
     });
     
-    const subjects = Array.from(subjectsSet).sort();
-    console.log('fetchSubjects: Found subjects:', subjects);
-    
-    return subjects;
+    const subjectsList = Array.from(subjects);
+    console.log('fetchSubjects: Found subjects:', subjectsList);
+    return subjectsList;
   } catch (error) {
-    console.error('Error fetching subjects:', error);
+    console.error('fetchSubjects: Error fetching subjects:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch resources for multiple chapters
+ * @param classId The class ID
+ * @param subjectId The subject ID
+ * @param chapters Array of chapter names to fetch resources for
+ * @returns Array of resources
+ */
+export const fetchResourcesByChapters = async (
+  classId: string, 
+  subjectId: string, 
+  chapters: string[]
+): Promise<Resource[]> => {
+  console.log('fetchResourcesByChapters: Starting with class:', classId, 'subject:', subjectId, 'chapters:', chapters);
+  
+  if (!classId || !subjectId || !chapters.length) {
+    console.warn('fetchResourcesByChapters: Missing required parameters');
     return [];
+  }
+  
+  try {
+    const resourcesRef = collection(db, 'resources');
+    const resources: Resource[] = [];
+    
+    // We need to query for each chapter separately since Firestore doesn't support OR queries with different fields
+    for (const chapter of chapters) {
+      console.log(`fetchResourcesByChapters: Querying for chapter: ${chapter}`);
+      
+      const q = query(
+        resourcesRef,
+        where('class', '==', classId),
+        where('subject', '==', subjectId),
+        where('chapter', '==', chapter)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      console.log(`fetchResourcesByChapters: Found ${querySnapshot.size} resources for chapter ${chapter}`);
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        resources.push({
+          id: doc.id,
+          title: data.title || '',
+          description: data.description || '',
+          fileUrl: data.fileUrl || '',
+          fileType: data.fileType || '',
+          fileName: data.fileName || '',
+          class: data.class || '',
+          subject: data.subject || '',
+          book: data.book || '',
+          chapter: data.chapter || '',
+          createdAt: data.createdAt || null,
+          updatedAt: data.updatedAt || null,
+          userId: data.userId || ''
+        });
+      });
+    }
+    
+    console.log(`fetchResourcesByChapters: Total resources found: ${resources.length}`);
+    return resources;
+  } catch (error) {
+    console.error('fetchResourcesByChapters: Error fetching resources:', error);
+    throw error;
   }
 };

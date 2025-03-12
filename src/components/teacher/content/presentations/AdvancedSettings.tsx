@@ -1,5 +1,5 @@
-import React from 'react';
-import { Settings, Layout, Palette } from 'lucide-react';
+import { Settings, Layout } from 'lucide-react';
+import PresentationTemplates from './PresentationTemplates';
 
 interface AdvancedSettingsProps {
   slideCount: number;
@@ -8,14 +8,8 @@ interface AdvancedSettingsProps {
   setDesignTemplate: (template: string) => void;
   additionalInstructions: string;
   setAdditionalInstructions: (value: string) => void;
+  isDarkMode: boolean;
 }
-
-const designTemplates = [
-  { id: 'modern', label: 'Modern' },
-  { id: 'minimalist', label: 'Minimalist' },
-  { id: 'academic', label: 'Academic' },
-  { id: 'creative', label: 'Creative' },
-];
 
 export default function AdvancedSettings({
   slideCount,
@@ -24,6 +18,7 @@ export default function AdvancedSettings({
   setDesignTemplate,
   additionalInstructions,
   setAdditionalInstructions,
+  isDarkMode,
 }: AdvancedSettingsProps) {
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
@@ -56,26 +51,12 @@ export default function AdvancedSettings({
           </p>
         </div>
 
-        {/* Design Template */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Design Template
-          </label>
-          <div className="relative">
-            <Palette className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-            <select
-              value={designTemplate}
-              onChange={(e) => setDesignTemplate(e.target.value)}
-              className="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
-            >
-              {designTemplates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        {/* Design Template - Using the new PresentationTemplates component */}
+        <PresentationTemplates 
+          selectedTemplate={designTemplate}
+          onSelectTemplate={setDesignTemplate}
+          isDarkMode={isDarkMode}
+        />
 
         {/* Additional Instructions */}
         <div>
