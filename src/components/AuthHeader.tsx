@@ -9,7 +9,7 @@ export default function AuthHeader() {
         <div className="flex justify-between items-center">
           <Link to="/" className="flex items-center gap-2 text-primary-600">
             <GraduationCap className="w-8 h-8" />
-            <span className="text-xl font-semibold">TeachAssist</span>
+            <span className="text-xl font-semibold">TeachAssist Pro</span>
           </Link>
           <Link
             to="/"

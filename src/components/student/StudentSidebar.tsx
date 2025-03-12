@@ -42,7 +42,7 @@ export default function StudentSidebar({ isOpen, onClose }: StudentSidebarProps)
         <div className="flex h-16 shrink-0 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2 text-primary-600 dark:text-primary-400">
             <GraduationCap className="h-8 w-8" />
-            <span className="text-xl font-semibold">TeachAssist</span>
+            <span className="text-xl font-semibold">TeachAssist Pro</span>
           </Link>
           <button
             type="button"

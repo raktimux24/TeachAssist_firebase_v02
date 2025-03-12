@@ -13,7 +13,7 @@ export default function Header({ isDarkMode, onThemeToggle }: HeaderProps) {
       <nav className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-2 text-primary-600 dark:text-primary-400">
           <GraduationCap className="w-7 h-7 sm:w-8 sm:h-8" />
-          <span className="text-lg sm:text-xl font-semibold">TeachAssist</span>
+          <span className="text-lg sm:text-xl font-semibold">TeachAssist Pro</span>
         </Link>
         
         <div className="flex items-center gap-2 sm:gap-4">
