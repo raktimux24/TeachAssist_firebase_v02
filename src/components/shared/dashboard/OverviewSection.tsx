@@ -1,11 +1,10 @@
-import React from 'react';
-import { DivideIcon as LucideIcon } from 'lucide-react';
+import { DivideIcon } from 'lucide-react';
 import OverviewCard from './OverviewCard';
 
 interface OverviewItem {
   title: string;
   value: string | number;
-  icon: LucideIcon;
+  icon: typeof DivideIcon;
   trend?: {
     value: number;
     isPositive: boolean;

@@ -1,4 +1,3 @@
-import React from 'react';
 import { TemplateOption } from './PresentationTemplates';
 
 interface TemplatedSlideProps {

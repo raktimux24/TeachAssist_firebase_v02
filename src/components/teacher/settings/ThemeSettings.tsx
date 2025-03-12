@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';

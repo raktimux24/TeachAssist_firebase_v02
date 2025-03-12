@@ -1,4 +1,3 @@
-import React from 'react';
 import TeacherLayout from '../../components/teacher/TeacherLayout';
 import ContentGenerationSelector from '../../components/teacher/content-generation/ContentGenerationSelector';
 

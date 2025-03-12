@@ -1,4 +1,3 @@
-import React from 'react';
 import StudentLayout from '../../components/student/StudentLayout';
 import SettingsTabs from '../../components/student/settings/SettingsTabs';
 

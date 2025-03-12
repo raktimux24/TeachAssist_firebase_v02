@@ -1,4 +1,3 @@
-import React from 'react';
 import TeacherLayout from '../../../components/teacher/TeacherLayout';
 import FlashcardsGenerator from '../../../components/teacher/content/FlashcardsGenerator';
 
@@ -11,7 +10,7 @@ export default function GenerateFlashcards({ isDarkMode, onThemeToggle }: Genera
   return (
     <TeacherLayout isDarkMode={isDarkMode} onThemeToggle={onThemeToggle}>
       <div className="py-6">
-        <FlashcardsGenerator isDarkMode={isDarkMode} />
+        <FlashcardsGenerator />
       </div>
     </TeacherLayout>
   );

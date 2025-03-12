@@ -13,7 +13,6 @@ import { useFlashcards } from '../../../context/FlashcardsContext';
 import { useAuth } from '../../../contexts/AuthContext';
 
 interface FlashcardsGeneratorProps {
-  isDarkMode: boolean;
 }
 
 const flashcardTypes = [
@@ -44,7 +43,7 @@ const flashcardTypes = [
   },
 ];
 
-export default function FlashcardsGenerator({ isDarkMode }: FlashcardsGeneratorProps) {
+export default function FlashcardsGenerator({}: FlashcardsGeneratorProps) {
   const navigate = useNavigate();
   const { setFlashcardSet, setIsGenerating, setError } = useFlashcards();
   const { currentUser } = useAuth();

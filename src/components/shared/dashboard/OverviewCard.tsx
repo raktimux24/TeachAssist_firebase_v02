@@ -1,10 +1,9 @@
-import React from 'react';
-import { DivideIcon as LucideIcon } from 'lucide-react';
+import { DivideIcon } from 'lucide-react';
 
 interface OverviewCardProps {
   title: string;
   value: string | number;
-  icon: LucideIcon;
+  icon: typeof DivideIcon;
   trend?: {
     value: number;
     isPositive: boolean;

@@ -1,4 +1,3 @@
-import React from 'react';
 import StudentLayout from '../../components/student/StudentLayout';
 import QuizResultsSummary from '../../components/student/quiz/QuizResultsSummary';
 import QuizResultsDetails from '../../components/student/quiz/QuizResultsDetails';

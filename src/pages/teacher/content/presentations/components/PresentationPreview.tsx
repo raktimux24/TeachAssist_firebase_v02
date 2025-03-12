@@ -1,17 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Grid, Layout } from 'lucide-react';
 import TemplatedSlide from '../../../../../components/teacher/content/presentations/TemplatedSlide';
 import { templateOptions } from '../../../../../components/teacher/content/presentations/PresentationTemplates';
 import { Presentation } from '../../../../../services/presentationService';
 import { savePresentation } from '../../../../../firebase/presentations';
 import { useAuth } from '../../../../../contexts/AuthContext';
-
-interface Slide {
-  id: number;
-  title: string;
-  content: string[];
-  notes?: string;
-}
 
 // Fallback mock presentation if none is found in sessionStorage
 const mockPresentation = {
