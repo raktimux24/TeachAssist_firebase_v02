@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Resource } from '../../../types/resource';
-import { FileIcon, Download, Trash2, Loader2, Tag } from 'lucide-react';
+import { FileIcon, Download, Trash2, Loader2, Tag, Edit } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 import { deleteResource, fetchResources } from '../../../firebase/resources';
@@ -8,6 +8,7 @@ import { getDownloadURL } from 'firebase/storage';
 import { storage } from '../../../firebase/config';
 import { ref } from 'firebase/storage';
 import { useAuth } from '../../../contexts/AuthContext';
+import ResourceEditModal from './ResourceEditModal';
 
 interface ResourceTableProps {
   resources?: Resource[];
@@ -33,6 +34,8 @@ export default function ResourceTable({
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const { currentUser } = useAuth();
 
   useEffect(() => {
@@ -152,6 +155,53 @@ export default function ResourceTable({
     }
   };
 
+  const handleEdit = (resource: Resource) => {
+    setSelectedResource(resource);
+    setEditModalOpen(true);
+  };
+
+  const handleResourceUpdated = () => {
+    // Refresh resources after update
+    if (initialResources) {
+      // If resources are provided externally, trigger the parent's refresh mechanism
+      onResourceDeleted?.();
+    } else {
+      // Otherwise, reload resources directly
+      const loadResources = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          
+          const formattedClass = selectedClass === 'all' ? 'all' : selectedClass.replace('Class ', '');
+          
+          const fetchedResources = await fetchResources({
+            searchQuery,
+            class: formattedClass,
+            subject: selectedSubject,
+            chapter: selectedChapter
+          });
+          
+          let filteredResources = fetchedResources;
+          
+          if (showOnlyUserResources && currentUser) {
+            filteredResources = filteredResources.filter(
+              (resource: Resource) => resource.uploadedBy === currentUser.uid
+            );
+          }
+          
+          setResources(filteredResources);
+        } catch (err) {
+          console.error('Error loading resources:', err);
+          setError('Failed to load resources');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      loadResources();
+    }
+  };
+
   return (
     <>
       {loading ? (
@@ -219,7 +269,7 @@ export default function ResourceTable({
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-2">
-                      {resource.tags.map((tag, index) => (
+                      {resource.tags && resource.tags.map((tag, index) => (
                         <span
                           key={index}
                           className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
@@ -240,6 +290,14 @@ export default function ResourceTable({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
+                      <button
+                        onClick={() => handleEdit(resource)}
+                        disabled={downloadingId === resource.id || deletingId === resource.id}
+                        className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Edit resource"
+                      >
+                        <Edit className="h-5 w-5" />
+                      </button>
                       <button
                         onClick={() => handleDownload(resource)}
                         disabled={downloadingId === resource.id || deletingId === resource.id}
@@ -272,6 +330,14 @@ export default function ResourceTable({
           </table>
         </div>
       )}
+
+      {/* Edit Modal */}
+      <ResourceEditModal
+        resource={selectedResource}
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        onResourceUpdated={handleResourceUpdated}
+      />
     </>
   );
 }

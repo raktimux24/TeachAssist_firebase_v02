@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Resource } from '../../../types/resource';
-import { FileIcon, Download, Trash2, Loader2 } from 'lucide-react';
+import { FileIcon, Download, Trash2, Loader2, Edit } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 import { deleteResource, fetchResources } from '../../../firebase/resources';
 import { useAuth } from '../../../contexts/AuthContext';
+import ResourceEditModal from './ResourceEditModal';
 
 interface ResourceGridProps {
   searchQuery?: string;
@@ -28,6 +29,8 @@ export default function ResourceGrid({
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const { currentUser } = useAuth();
 
   useEffect(() => {
@@ -144,6 +147,47 @@ export default function ResourceGrid({
     }
   };
 
+  const handleEdit = (resource: Resource) => {
+    setSelectedResource(resource);
+    setEditModalOpen(true);
+  };
+
+  const handleResourceUpdated = () => {
+    // Refresh resources after update
+    const loadResources = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const formattedClass = selectedClass === 'all' ? 'all' : selectedClass.replace('Class ', '');
+        
+        const fetchedResources = await fetchResources({
+          searchQuery,
+          class: formattedClass,
+          subject: selectedSubject,
+          chapter: selectedChapter
+        });
+        
+        let filteredResources = fetchedResources;
+        
+        if (showOnlyUserResources && currentUser) {
+          filteredResources = filteredResources.filter(
+            (resource: Resource) => resource.uploadedBy === currentUser.uid
+          );
+        }
+        
+        setResources(filteredResources);
+      } catch (err) {
+        console.error('Error loading resources:', err);
+        setError('Failed to load resources');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadResources();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
@@ -193,6 +237,14 @@ export default function ResourceGrid({
                 </div>
               </div>
               <div className="flex items-center space-x-2 flex-shrink-0">
+                <button
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleEdit(resource)}
+                  disabled={downloadingId === resource.id || deletingId === resource.id}
+                  title="Edit resource"
+                >
+                  <Edit className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                </button>
                 <button
                   className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => handleDownload(resource)}
@@ -277,6 +329,14 @@ export default function ResourceGrid({
           </div>
         </div>
       ))}
+      
+      {/* Edit Modal */}
+      <ResourceEditModal
+        resource={selectedResource}
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        onResourceUpdated={handleResourceUpdated}
+      />
     </div>
   );
 }
