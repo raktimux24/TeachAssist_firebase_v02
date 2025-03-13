@@ -3,23 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import BasicSettings from './lesson-plans/BasicSettings';
 import LessonPlanOptions from './lesson-plans/LessonPlanOptions';
 import ConfigurationSummary from './lesson-plans/ConfigurationSummary';
+import { fetchClasses, fetchSubjects, fetchChapters, fetchResourcesByChapters } from '../../../firebase/resources';
+import { generateLessonPlan } from '../../../services/lessonPlanGeneration';
+import { toast } from 'react-hot-toast';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface LessonPlanGeneratorProps {
   isDarkMode: boolean;
 }
-
-const classes = ['Class 10', 'Class 11', 'Class 12'];
-const subjects = {
-  'Class 10': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-  'Class 11': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-  'Class 12': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-};
-const chapters = {
-  Mathematics: ['Algebra', 'Geometry', 'Calculus'],
-  Physics: ['Mechanics', 'Thermodynamics', 'Optics'],
-  Chemistry: ['Organic Chemistry', 'Inorganic Chemistry', 'Physical Chemistry'],
-  Biology: ['Cell Biology', 'Genetics', 'Evolution'],
-};
 
 export default function LessonPlanGenerator({ isDarkMode }: LessonPlanGeneratorProps) {
   console.log('[LessonPlanGenerator] Received isDarkMode:', isDarkMode);
@@ -30,6 +21,7 @@ export default function LessonPlanGenerator({ isDarkMode }: LessonPlanGeneratorP
   }, [isDarkMode]);
   
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
@@ -37,21 +29,151 @@ export default function LessonPlanGenerator({ isDarkMode }: LessonPlanGeneratorP
   const [numberOfClasses, setNumberOfClasses] = useState(1);
   const [learningObjectives, setLearningObjectives] = useState('');
   const [requiredResources, setRequiredResources] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  // State for storing data from Firebase
+  const [classes, setClasses] = useState<string[]>([]);
+  const [subjects, setSubjects] = useState<Record<string, string[]>>({});
+  const [chapters, setChapters] = useState<Record<string, string[]>>({});
+  const [loading, setLoading] = useState({
+    classes: false,
+    subjects: false,
+    chapters: false
+  });
 
-  const handleGenerate = () => {
-    // Log the configuration (you can replace this with actual API call later)
-    console.log('Lesson plan configuration:', {
-      class: selectedClass,
-      subject: selectedSubject,
-      chapters: selectedChapters,
-      format,
-      numberOfClasses,
-      learningObjectives,
-      requiredResources,
-    });
-    
-    // Navigate to the results page
-    navigate('/teacher/content/lesson-plans/results');
+  // Load saved options from localStorage if available
+  useEffect(() => {
+    try {
+      const savedOptions = localStorage.getItem('lessonPlanOptions');
+      if (savedOptions) {
+        const options = JSON.parse(savedOptions);
+        setSelectedClass(options.class || '');
+        setSelectedSubject(options.subject || '');
+        setSelectedChapters(options.chapters || []);
+        setFormat(options.format || 'general');
+        setNumberOfClasses(options.numberOfClasses || 1);
+        setLearningObjectives(options.learningObjectives || '');
+        setRequiredResources(options.requiredResources || '');
+        
+        // Clear the saved options after loading them
+        localStorage.removeItem('lessonPlanOptions');
+        
+        toast.success('Previous lesson plan settings loaded');
+      }
+    } catch (error) {
+      console.error('Error loading saved options:', error);
+    }
+  }, []);
+
+  // Fetch classes on component mount
+  useEffect(() => {
+    const getClasses = async () => {
+      setLoading(prev => ({ ...prev, classes: true }));
+      try {
+        const fetchedClasses = await fetchClasses();
+        setClasses(fetchedClasses);
+      } catch (error) {
+        console.error('Error fetching classes:', error);
+        toast.error('Failed to load classes. Please try again.');
+      } finally {
+        setLoading(prev => ({ ...prev, classes: false }));
+      }
+    };
+
+    getClasses();
+  }, []);
+
+  // Fetch subjects when a class is selected
+  useEffect(() => {
+    if (!selectedClass) return;
+
+    const getSubjects = async () => {
+      setLoading(prev => ({ ...prev, subjects: true }));
+      try {
+        const fetchedSubjects = await fetchSubjects(selectedClass);
+        setSubjects(prev => ({
+          ...prev,
+          [selectedClass]: fetchedSubjects
+        }));
+      } catch (error) {
+        console.error('Error fetching subjects:', error);
+        toast.error('Failed to load subjects. Please try again.');
+      } finally {
+        setLoading(prev => ({ ...prev, subjects: false }));
+      }
+    };
+
+    getSubjects();
+  }, [selectedClass]);
+
+  // Fetch chapters when a subject is selected
+  useEffect(() => {
+    if (!selectedClass || !selectedSubject) return;
+
+    const getChapters = async () => {
+      setLoading(prev => ({ ...prev, chapters: true }));
+      try {
+        const fetchedChapters = await fetchChapters(selectedClass, selectedSubject);
+        setChapters(prev => ({
+          ...prev,
+          [selectedSubject]: fetchedChapters
+        }));
+      } catch (error) {
+        console.error('Error fetching chapters:', error);
+        toast.error('Failed to load chapters. Please try again.');
+      } finally {
+        setLoading(prev => ({ ...prev, chapters: false }));
+      }
+    };
+
+    getChapters();
+  }, [selectedClass, selectedSubject]);
+
+  const handleGenerate = async () => {
+    if (!selectedClass || !selectedSubject || selectedChapters.length === 0) {
+      toast.error('Please select a class, subject, and at least one chapter');
+      return;
+    }
+
+    setIsGenerating(true);
+    toast.loading('Generating lesson plan...', { id: 'generating-lesson-plan' });
+
+    try {
+      // Fetch resources for the selected chapters
+      const resources = await fetchResourcesByChapters(selectedClass, selectedSubject, selectedChapters);
+
+      if (resources.length === 0) {
+        toast.error('No resources found for the selected chapters. Please select different chapters or contact your administrator.');
+        setIsGenerating(false);
+        return;
+      }
+
+      // Generate lesson plan using the service
+      const lessonPlan = await generateLessonPlan({
+        title: `${selectedSubject} Lesson Plan: ${selectedChapters.join(', ')}`,
+        class: selectedClass,
+        subject: selectedSubject,
+        chapters: selectedChapters,
+        format,
+        numberOfClasses,
+        learningObjectives,
+        requiredResources,
+        resources,
+        userId: currentUser?.uid // Pass the user ID if available
+      });
+
+      // Store the generated lesson plan in localStorage for the results page
+      localStorage.setItem('generatedLessonPlan', JSON.stringify(lessonPlan));
+      
+      // Navigate to the results page
+      toast.success('Lesson plan generated successfully!', { id: 'generating-lesson-plan' });
+      navigate('/teacher/content/lesson-plans/results');
+    } catch (error) {
+      console.error('Error generating lesson plan:', error);
+      toast.error('Failed to generate lesson plan. Please try again later.', { id: 'generating-lesson-plan' });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -77,7 +199,7 @@ export default function LessonPlanGenerator({ isDarkMode }: LessonPlanGeneratorP
             classes={classes}
             subjects={subjects}
             chapters={chapters}
-            isDarkMode={isDarkMode}
+            loading={loading}
           />
 
           <LessonPlanOptions
@@ -104,10 +226,17 @@ export default function LessonPlanGenerator({ isDarkMode }: LessonPlanGeneratorP
           <div className="flex justify-end">
             <button
               onClick={handleGenerate}
-              disabled={!selectedClass || !selectedSubject || selectedChapters.length === 0}
-              className="px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!selectedClass || !selectedSubject || selectedChapters.length === 0 || isGenerating}
+              className="px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
-              Generate Lesson Plan
+              {isGenerating ? (
+                <>
+                  <div className="animate-spin mr-2 h-5 w-5 border-2 border-white rounded-full border-t-transparent"></div>
+                  Generating...
+                </>
+              ) : (
+                'Generate Lesson Plan'
+              )}
             </button>
           </div>
         </div>

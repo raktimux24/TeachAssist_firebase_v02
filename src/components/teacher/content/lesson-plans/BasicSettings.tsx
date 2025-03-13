@@ -11,6 +11,11 @@ interface BasicSettingsProps {
   classes: string[];
   subjects: Record<string, string[]>;
   chapters: Record<string, string[]>;
+  loading: {
+    classes: boolean;
+    subjects: boolean;
+    chapters: boolean;
+  };
   isDarkMode?: boolean;
 }
 
@@ -24,6 +29,7 @@ export default function BasicSettings({
   classes,
   subjects,
   chapters,
+  loading,
   isDarkMode,
 }: BasicSettingsProps) {
   console.log('[BasicSettings] Received isDarkMode:', isDarkMode);
@@ -49,16 +55,24 @@ export default function BasicSettings({
                 setSelectedSubject('');
                 setSelectedChapters([]);
               }}
+              disabled={loading.classes}
               className="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
             >
               <option value="">Select a class</option>
-              {classes.map((cls) => (
-                <option key={cls} value={cls}>{cls}</option>
-              ))}
+              {loading.classes ? (
+                <option value="" disabled>Loading classes...</option>
+              ) : (
+                classes.map((cls) => (
+                  <option key={cls} value={cls}>{cls}</option>
+                ))
+              )}
             </select>
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <GraduationCap className="h-5 w-5 text-gray-400" />
-            </div>
+            <GraduationCap className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            {loading.classes && (
+              <div className="absolute right-3 top-2.5">
+                <div className="animate-spin h-5 w-5 border-2 border-primary-500 rounded-full border-t-transparent"></div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -74,17 +88,24 @@ export default function BasicSettings({
                 setSelectedSubject(e.target.value);
                 setSelectedChapters([]);
               }}
-              disabled={!selectedClass}
-              className="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!selectedClass || loading.subjects}
+              className="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
             >
               <option value="">Select a subject</option>
-              {selectedClass && subjects[selectedClass]?.map((subject) => (
-                <option key={subject} value={subject}>{subject}</option>
-              ))}
+              {loading.subjects ? (
+                <option value="" disabled>Loading subjects...</option>
+              ) : (
+                selectedClass && subjects[selectedClass]?.map((subject) => (
+                  <option key={subject} value={subject}>{subject}</option>
+                ))
+              )}
             </select>
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <BookOpen className="h-5 w-5 text-gray-400" />
-            </div>
+            <BookOpen className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            {loading.subjects && (
+              <div className="absolute right-3 top-2.5">
+                <div className="animate-spin h-5 w-5 border-2 border-primary-500 rounded-full border-t-transparent"></div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -95,35 +116,33 @@ export default function BasicSettings({
           Select Chapters
         </label>
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Layers className="h-5 w-5 text-gray-400" />
-          </div>
-          <div className="pl-10 space-y-2">
-            {selectedSubject ? (
-              chapters[selectedSubject]?.map((chapter) => (
-                <label key={chapter} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={selectedChapters.includes(chapter)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedChapters([...selectedChapters, chapter]);
-                      } else {
-                        setSelectedChapters(selectedChapters.filter((ch) => ch !== chapter));
-                      }
-                    }}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{chapter}</span>
-                </label>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Please select a subject to view available chapters
-              </p>
+          <select
+            multiple
+            value={selectedChapters}
+            onChange={(e) => setSelectedChapters(
+              Array.from(e.target.selectedOptions, option => option.value)
             )}
-          </div>
+            disabled={!selectedSubject || loading.chapters}
+            className="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 h-32 min-h-[8rem]"
+          >
+            {loading.chapters ? (
+              <option value="" disabled>Loading chapters...</option>
+            ) : (
+              selectedSubject && chapters[selectedSubject]?.map((chapter) => (
+                <option key={chapter} value={chapter}>{chapter}</option>
+              ))
+            )}
+          </select>
+          <Layers className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+          {loading.chapters && (
+            <div className="absolute right-3 top-2.5">
+              <div className="animate-spin h-5 w-5 border-2 border-primary-500 rounded-full border-t-transparent"></div>
+            </div>
+          )}
         </div>
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          Hold Ctrl/Cmd to select multiple chapters
+        </p>
       </div>
     </div>
   );

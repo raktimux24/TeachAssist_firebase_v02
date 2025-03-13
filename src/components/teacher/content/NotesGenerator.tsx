@@ -1,25 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import BasicSettings from './notes/BasicSettings';
 import NoteTypeSelector from './notes/NoteTypeSelector';
 import AdvancedSettings from './notes/AdvancedSettings';
 import ConfigurationSummary from './notes/ConfigurationSummary';
+import { fetchClasses, fetchSubjects, fetchChapters, fetchResourcesByChapters } from '../../../firebase/resources';
+import { generateNotes } from '../../../services/notesGeneration';
+import { toast } from 'react-hot-toast';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface NotesGeneratorProps {
   isDarkMode: boolean;
 }
-
-const classes = ['Class 10', 'Class 11', 'Class 12'];
-const subjects = {
-  'Class 10': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-  'Class 11': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-  'Class 12': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-};
-const chapters = {
-  Mathematics: ['Algebra', 'Geometry', 'Calculus'],
-  Physics: ['Mechanics', 'Thermodynamics', 'Optics'],
-  Chemistry: ['Organic Chemistry', 'Inorganic Chemistry', 'Physical Chemistry'],
-  Biology: ['Cell Biology', 'Genetics', 'Evolution'],
-};
 
 const noteTypes = [
   { id: 'bullet-points', label: 'Bullet Points' },
@@ -30,6 +22,8 @@ const noteTypes = [
 ];
 
 export default function NotesGenerator({ isDarkMode }: NotesGeneratorProps) {
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
@@ -42,32 +36,138 @@ export default function NotesGenerator({ isDarkMode }: NotesGeneratorProps) {
   const [includeSummaries, setIncludeSummaries] = useState(true);
   const [includeDiscussionQuestions, setIncludeDiscussionQuestions] = useState(true);
   const [additionalInstructions, setAdditionalInstructions] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  // State for storing data from Firebase
+  const [classes, setClasses] = useState<string[]>([]);
+  const [subjects, setSubjects] = useState<Record<string, string[]>>({});
+  const [chapters, setChapters] = useState<Record<string, string[]>>({});
+  const [loading, setLoading] = useState({
+    classes: false,
+    subjects: false,
+    chapters: false
+  });
+
+  // Fetch classes on component mount
+  useEffect(() => {
+    const getClasses = async () => {
+      setLoading(prev => ({ ...prev, classes: true }));
+      try {
+        const fetchedClasses = await fetchClasses();
+        setClasses(fetchedClasses);
+      } catch (error) {
+        console.error('Error fetching classes:', error);
+        toast.error('Failed to load classes. Please try again.');
+      } finally {
+        setLoading(prev => ({ ...prev, classes: false }));
+      }
+    };
+
+    getClasses();
+  }, []);
+
+  // Fetch subjects when a class is selected
+  useEffect(() => {
+    if (!selectedClass) return;
+
+    const getSubjects = async () => {
+      setLoading(prev => ({ ...prev, subjects: true }));
+      try {
+        const fetchedSubjects = await fetchSubjects(selectedClass);
+        setSubjects(prev => ({
+          ...prev,
+          [selectedClass]: fetchedSubjects
+        }));
+      } catch (error) {
+        console.error('Error fetching subjects:', error);
+        toast.error('Failed to load subjects. Please try again.');
+      } finally {
+        setLoading(prev => ({ ...prev, subjects: false }));
+      }
+    };
+
+    getSubjects();
+  }, [selectedClass]);
+
+  // Fetch chapters when a subject is selected
+  useEffect(() => {
+    if (!selectedClass || !selectedSubject) return;
+
+    const getChapters = async () => {
+      setLoading(prev => ({ ...prev, chapters: true }));
+      try {
+        const fetchedChapters = await fetchChapters(selectedClass, selectedSubject);
+        setChapters(prev => ({
+          ...prev,
+          [selectedSubject]: fetchedChapters
+        }));
+      } catch (error) {
+        console.error('Error fetching chapters:', error);
+        toast.error('Failed to load chapters. Please try again.');
+      } finally {
+        setLoading(prev => ({ ...prev, chapters: false }));
+      }
+    };
+
+    getChapters();
+  }, [selectedClass, selectedSubject]);
 
   const isSTEMSubject = ['Mathematics', 'Physics', 'Chemistry'].includes(selectedSubject);
 
-  const handleGenerate = () => {
-    // Log the configuration (you can replace this with actual API call later)
-    console.log('Notes configuration:', {
-      class: selectedClass,
-      subject: selectedSubject,
-      chapters: selectedChapters,
-      noteType,
-      layout,
-      includeDefinitions,
-      includeTheorems,
-      includeFormulas,
-      includeKeyPoints,
-      includeSummaries,
-      includeDiscussionQuestions,
-      additionalInstructions,
-    });
-    
-    // Navigate to the results page
-    window.location.href = '/teacher/content/notes/results';
+  const handleGenerate = async () => {
+    if (!selectedClass || !selectedSubject || selectedChapters.length === 0) {
+      toast.error('Please select a class, subject, and at least one chapter');
+      return;
+    }
+
+    setIsGenerating(true);
+    toast.loading('Generating notes...', { id: 'generating-notes' });
+
+    try {
+      // Fetch resources for the selected chapters
+      const resources = await fetchResourcesByChapters(selectedClass, selectedSubject, selectedChapters);
+
+      if (resources.length === 0) {
+        toast.error('No resources found for the selected chapters. Please select different chapters or contact your administrator.');
+        setIsGenerating(false);
+        return;
+      }
+
+      // Generate notes
+      const notesSet = await generateNotes({
+        title: `${selectedSubject} Notes: ${selectedChapters.join(', ')}`,
+        class: selectedClass,
+        subject: selectedSubject,
+        chapters: selectedChapters,
+        noteType: noteType,
+        layout,
+        includeDefinitions,
+        includeTheorems,
+        includeFormulas,
+        includeKeyPoints,
+        includeSummaries,
+        includeDiscussionQuestions,
+        additionalInstructions,
+        resources,
+        userId: currentUser?.uid // Pass the user ID if available
+      });
+
+      // Store the generated notes in localStorage for the results page
+      localStorage.setItem('generatedNotes', JSON.stringify(notesSet));
+
+      // Navigate to the results page
+      toast.success('Notes generated successfully!', { id: 'generating-notes' });
+      navigate('/teacher/content/notes/results');
+    } catch (error) {
+      console.error('Error generating notes:', error);
+      toast.error('Failed to generate notes. Please try again later.', { id: 'generating-notes' });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className={`w-full max-w-4xl mx-auto ${isDarkMode ? 'dark' : ''}`}>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
           Generate Notes
@@ -89,6 +189,7 @@ export default function NotesGenerator({ isDarkMode }: NotesGeneratorProps) {
             classes={classes}
             subjects={subjects}
             chapters={chapters}
+            loading={loading}
           />
 
           <NoteTypeSelector
@@ -128,10 +229,10 @@ export default function NotesGenerator({ isDarkMode }: NotesGeneratorProps) {
           <div className="flex justify-end">
             <button
               onClick={handleGenerate}
-              disabled={!selectedClass || !selectedSubject || selectedChapters.length === 0}
+              disabled={!selectedClass || !selectedSubject || selectedChapters.length === 0 || isGenerating}
               className="px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Generate Notes
+              {isGenerating ? 'Generating...' : 'Generate Notes'}
             </button>
           </div>
         </div>
