@@ -1,6 +1,6 @@
 import { Resource } from '../types/resource';
 import { db } from '../firebase/config';
-import { collection, addDoc, serverTimestamp, DocumentReference, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, DocumentReference, query, where, getDocs } from 'firebase/firestore';
 
 export interface LessonPlanSection {
   id: string;
@@ -178,10 +178,11 @@ export const getUserLessonPlans = async (userId: string): Promise<LessonPlan[]> 
     }
     
     // Create a query to get all lesson plans for this user
+    // Note: We're not using orderBy here to avoid the composite index requirement
+    // Instead, we'll sort the results in memory after fetching
     const q = query(
       collection(db, 'lessonplan'),
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', userId)
     );
     
     // Execute the query
@@ -214,6 +215,9 @@ export const getUserLessonPlans = async (userId: string): Promise<LessonPlan[]> 
       
       lessonPlans.push(lessonPlan);
     });
+    
+    // Sort the lesson plans by createdAt in descending order (newest first)
+    lessonPlans.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     
     console.log(`Retrieved ${lessonPlans.length} lesson plans for user ${userId}`);
     return lessonPlans;

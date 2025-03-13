@@ -168,9 +168,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
       
-      if (userDoc.exists()) {
+      // Add retry logic for Firestore operations
+      let retries = 3;
+      let userDoc = null;
+      
+      while (retries > 0) {
+        try {
+          userDoc = await getDoc(userDocRef);
+          break; // If successful, exit the retry loop
+        } catch (fetchError) {
+          console.warn(`Error fetching user data (attempt ${4 - retries}/3):`, fetchError);
+          retries--;
+          
+          if (retries === 0) {
+            throw fetchError; // Re-throw if all retries failed
+          }
+          
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * (4 - retries)));
+        }
+      }
+      
+      if (userDoc && userDoc.exists()) {
         const userData = userDoc.data() as UserInfo;
         // Ensure role is always lowercase for consistent comparison
         if (userData.role) {
@@ -180,8 +200,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Add photoURL from Firebase Auth user if available
         if (user.photoURL && !userData.photoURL) {
           userData.photoURL = user.photoURL;
-          // Update the Firestore document with the photoURL
-          await setDoc(userDocRef, { photoURL: user.photoURL, updatedAt: serverTimestamp() }, { merge: true });
+          
+          // Update the Firestore document with the photoURL - with retry logic
+          let updateRetries = 3;
+          while (updateRetries > 0) {
+            try {
+              await setDoc(userDocRef, { photoURL: user.photoURL, updatedAt: serverTimestamp() }, { merge: true });
+              break; // If successful, exit the retry loop
+            } catch (updateError) {
+              console.warn(`Error updating user photoURL (attempt ${4 - updateRetries}/3):`, updateError);
+              updateRetries--;
+              
+              if (updateRetries === 0) {
+                console.error('Failed to update user photoURL after multiple attempts');
+                // Continue without throwing - this is not critical
+              }
+              
+              // Wait before retrying
+              await new Promise(resolve => setTimeout(resolve, 1000 * (4 - updateRetries)));
+            }
+          }
         }
         
         setUserInfo(userData);
@@ -195,22 +233,50 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           fullName: user.displayName || 'User',
           email: user.email || '',
           role: 'admin', // Default to admin for safety if we can't determine the role
-          organization: 'Default Organization',
+          organization: 'Unknown', // Add the required organization property
           photoURL: user.photoURL || undefined,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         };
         
-        // Save to Firestore
-        await setDoc(userDocRef, defaultUserData);
-        console.log('Created default user data:', defaultUserData);
+        // Save to Firestore with retry logic
+        let createRetries = 3;
+        while (createRetries > 0) {
+          try {
+            await setDoc(userDocRef, defaultUserData);
+            console.log('Created default user data:', defaultUserData);
+            break; // If successful, exit the retry loop
+          } catch (createError) {
+            console.warn(`Error creating default user data (attempt ${4 - createRetries}/3):`, createError);
+            createRetries--;
+            
+            if (createRetries === 0) {
+              console.error('Failed to create default user data after multiple attempts');
+              // Continue with local state even if Firestore update fails
+            }
+            
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000 * (4 - createRetries)));
+          }
+        }
         
-        // Update state
+        // Update state regardless of Firestore success
         setUserInfo(defaultUserData);
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
-      setUserInfo(null);
+      console.error('Error in fetchUserData:', error);
+      
+      // Create a minimal user info object from the auth user to allow the app to function
+      const fallbackUserInfo: UserInfo = {
+        uid: user.uid,
+        email: user.email || '',
+        role: 'user', // Default to regular user for safety
+        fullName: user.displayName || 'User',
+        organization: 'Unknown', // Add the required organization property
+      };
+      
+      console.log('Using fallback user info:', fallbackUserInfo);
+      setUserInfo(fallbackUserInfo);
     } finally {
       setLoading(false);
     }

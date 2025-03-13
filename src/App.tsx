@@ -23,6 +23,7 @@ import GenerateNotes from './pages/teacher/content/GenerateNotes';
 import GenerateLessonPlans from './pages/teacher/content/GenerateLessonPlans';
 import GenerateQuestionSets from './pages/teacher/content/GenerateQuestionSets';
 import QuestionSetResults from './pages/teacher/content/QuestionSetResults';
+import QuestionSetResultsPage from './pages/teacher/content/QuestionSetResultsPage';
 import GenerateFlashcards from './pages/teacher/content/GenerateFlashcards';
 import UploadResources from './pages/shared/resources/UploadResources';
 import FlashcardsResults from './pages/teacher/content/flashcards/FlashcardsResults';
@@ -166,6 +167,7 @@ function App() {
             <Route path="/teacher/content/question-sets" element={<GenerateQuestionSets isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content/flashcards" element={<GenerateFlashcards isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content/question-sets/results" element={<QuestionSetResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/question-sets/results/:questionSetId" element={<QuestionSetResultsPage isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content/flashcards/results" element={<FlashcardsResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content/lesson-plans/results" element={<LessonPlanResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content/notes/results" element={<ClassNotesResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />

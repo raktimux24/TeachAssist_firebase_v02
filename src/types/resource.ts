@@ -15,6 +15,7 @@ export interface Resource {
   subject: string;
   book?: string;
   chapter?: string;
+  chapters?: string[]; // Array of chapter names
   tags?: string[];
   uploadedBy?: string;
   uploadedByName?: string;
