@@ -140,9 +140,12 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
           toast.error('Failed to load generated notes');
         }
       } else {
-        console.error('No stored notes found in localStorage');
-        setDebugInfo('No stored notes found in localStorage');
-        toast.error('No generated notes found');
+        // Don't show error if we're loading from a specific ID
+        if (!noteId && !urlNoteId) {
+          console.log('No stored notes found in localStorage');
+          setDebugInfo('No stored notes found in localStorage');
+          toast.error('No generated notes found');
+        }
       }
     };
     

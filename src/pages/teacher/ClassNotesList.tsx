@@ -119,7 +119,7 @@ export default function ClassNotesList({ isDarkMode, onThemeToggle }: ClassNotes
 
   return (
     <TeacherLayout isDarkMode={isDarkMode} onThemeToggle={onThemeToggle}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="space-y-4 sm:space-y-6 w-full px-2 sm:px-0">
         <div className="space-y-6">
           {/* Header Section */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -174,7 +174,7 @@ export default function ClassNotesList({ isDarkMode, onThemeToggle }: ClassNotes
           />
 
           {/* Content Section */}
-          <div className="min-h-[300px] w-full overflow-hidden">
+          <div className="min-h-[300px] w-full">
             {loading ? (
               <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-black ring-opacity-5 rounded-lg p-6 text-center">
                 <div className="flex flex-col items-center justify-center">
@@ -204,19 +204,25 @@ export default function ClassNotesList({ isDarkMode, onThemeToggle }: ClassNotes
                 </button>
               </div>
             ) : viewMode === 'table' ? (
-              <div className="overflow-x-auto">
-                <ClassNotesTable
+              <div className="transition-all duration-300 w-full">
+                <div className="overflow-x-auto -mx-2 sm:-mx-0 rounded-lg">
+                  <div className="w-full">
+                    <ClassNotesTable
+                      notes={formattedNotes}
+                      onDelete={handleDelete}
+                      onView={handleView}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="transition-all duration-300 w-full">
+                <ClassNotesGrid
                   notes={formattedNotes}
                   onDelete={handleDelete}
                   onView={handleView}
                 />
               </div>
-            ) : (
-              <ClassNotesGrid
-                notes={formattedNotes}
-                onDelete={handleDelete}
-                onView={handleView}
-              />
             )}
           </div>
         </div>

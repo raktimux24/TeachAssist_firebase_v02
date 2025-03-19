@@ -94,20 +94,20 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
 
   // Handle delete action
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this presentation?')) {
+    if (window.confirm('Are you sure you want to delete this presentation? This action cannot be undone.')) {
       try {
         await deletePresentation(id);
-        setPresentations(prev => prev.filter(presentation => presentation.firebaseId !== id));
+        setPresentations(presentations.filter(p => p.firebaseId !== id));
       } catch (err) {
         console.error('Error deleting presentation:', err);
-        alert('Failed to delete presentation. Please try again.');
+        alert('Failed to delete presentation. Please try again later.');
       }
     }
   };
 
   // Handle view action
   const handleView = (id: string) => {
-    navigate(`/teacher/content/presentations/results/${id}`);
+    navigate(`/teacher/content/presentations/${id}`);
   };
 
   // Get unique subjects and classes for filters
@@ -122,39 +122,35 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
             Presentations
           </h1>
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-            <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 p-1 rounded-md shadow-sm">
-              <button
-                onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded ${
-                  viewMode === 'table' 
-                    ? 'bg-primary-100 text-primary-600 dark:bg-primary-900 dark:text-primary-400' 
-                    : 'text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400'
-                }`}
-                title="Table View"
-                aria-label="Switch to table view"
-              >
-                <List className="h-4 w-4 sm:h-5 sm:w-5" />
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded ${
-                  viewMode === 'grid' 
-                    ? 'bg-primary-100 text-primary-600 dark:bg-primary-900 dark:text-primary-400' 
-                    : 'text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400'
-                }`}
-                title="Grid View"
-                aria-label="Switch to grid view"
-              >
-                <LayoutGrid className="h-4 w-4 sm:h-5 sm:w-5" />
-              </button>
-            </div>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-2 rounded-md ${
+                viewMode === 'table'
+                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                  : 'bg-white text-gray-500 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+              }`}
+              title="Table View"
+            >
+              <List className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-md ${
+                viewMode === 'grid'
+                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                  : 'bg-white text-gray-500 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+              }`}
+              title="Grid View"
+            >
+              <LayoutGrid className="h-5 w-5" />
+            </button>
             <button
               onClick={() => navigate('/teacher/content/presentations')}
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
-              <Plus className="-ml-0.5 mr-2 h-4 w-4" />
-              Create New
+              <Plus className="-ml-1 mr-2 h-5 w-5" />
+              New
             </button>
           </div>
         </div>
@@ -169,75 +165,72 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
               </div>
               <input
                 type="text"
+                placeholder="Search presentations..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 text-sm text-gray-900 dark:text-white"
-                placeholder="Search presentations..."
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 sm:text-sm text-gray-900 dark:text-white"
               />
             </div>
 
             {/* Subject Filter */}
-            <div className="w-full sm:w-48">
-              <label htmlFor="subject-filter" className="sr-only">Filter by Subject</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Filter className="h-5 w-5 text-gray-400" />
-                </div>
-                <select
-                  id="subject-filter"
-                  value={selectedSubject}
-                  onChange={(e) => setSelectedSubject(e.target.value)}
-                  className="block w-full pl-10 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 sm:text-sm text-gray-900 dark:text-white"
-                >
-                  {subjects.map((subject) => (
+            <div className="relative w-full sm:w-48">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Filter className="h-5 w-5 text-gray-400" />
+              </div>
+              <select
+                id="subject-filter"
+                value={selectedSubject}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+                className="block w-full pl-10 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 sm:text-sm text-gray-900 dark:text-white"
+              >
+                <option value="all">All Subjects</option>
+                {subjects
+                  .filter(subject => subject !== 'all')
+                  .map(subject => (
                     <option key={subject} value={subject}>
-                      {subject === 'all' ? 'All Subjects' : subject}
+                      {subject}
                     </option>
                   ))}
-                </select>
-              </div>
+              </select>
             </div>
 
             {/* Class Filter */}
-            <div className="w-full sm:w-48">
-              <label htmlFor="class-filter" className="sr-only">Filter by Class</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Filter className="h-5 w-5 text-gray-400" />
-                </div>
-                <select
-                  id="class-filter"
-                  value={selectedClass}
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  className="block w-full pl-10 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 sm:text-sm text-gray-900 dark:text-white"
-                >
-                  {classes.map((classItem) => (
+            <div className="relative w-full sm:w-48">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Filter className="h-5 w-5 text-gray-400" />
+              </div>
+              <select
+                id="class-filter"
+                value={selectedClass}
+                onChange={(e) => setSelectedClass(e.target.value)}
+                className="block w-full pl-10 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 sm:text-sm text-gray-900 dark:text-white"
+              >
+                <option value="all">All Classes</option>
+                {classes
+                  .filter(classItem => classItem !== 'all')
+                  .map(classItem => (
                     <option key={classItem} value={classItem}>
-                      {classItem === 'all' ? 'All Classes' : classItem}
+                      {classItem}
                     </option>
                   ))}
-                </select>
-              </div>
+              </select>
             </div>
 
             {/* Sort By */}
-            <div className="w-full sm:w-48">
-              <label htmlFor="sort-by" className="sr-only">Sort By</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <SlidersHorizontal className="h-5 w-5 text-gray-400" />
-                </div>
-                <select
-                  id="sort-by"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="block w-full pl-10 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 sm:text-sm text-gray-900 dark:text-white"
-                >
-                  <option value="date">Date (Newest)</option>
-                  <option value="title">Title (A-Z)</option>
-                  <option value="subject">Subject (A-Z)</option>
-                </select>
+            <div className="relative w-full sm:w-48">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <SlidersHorizontal className="h-5 w-5 text-gray-400" />
               </div>
+              <select
+                id="sort-by"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="block w-full pl-10 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 sm:text-sm text-gray-900 dark:text-white"
+              >
+                <option value="date">Date (Newest)</option>
+                <option value="title">Title (A-Z)</option>
+                <option value="subject">Subject (A-Z)</option>
+              </select>
             </div>
           </div>
         </div>
@@ -274,120 +267,124 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
             </div>
           ) : viewMode === 'table' ? (
             <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Title
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Subject
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Class
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Slides
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Created
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {formattedPresentations.map((presentation) => (
-                      <tr key={presentation.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                          {presentation.title}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                          {presentation.subject}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                          {presentation.class}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                          {presentation.slideCount}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                          {presentation.createdAt}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex justify-end space-x-2">
-                            <button
-                              onClick={() => handleView(presentation.id)}
-                              className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300"
-                              title="View"
-                            >
-                              <Eye className="h-5 w-5 transition-transform duration-200 hover:scale-110" />
-                              <span className="sr-only">View</span>
-                            </button>
-                            <button
-                              onClick={() => handleDelete(presentation.id)}
-                              className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                              title="Delete"
-                            >
-                              <Trash2 className="h-5 w-5 transition-transform duration-200 hover:scale-110" />
-                              <span className="sr-only">Delete</span>
-                            </button>
-                          </div>
-                        </td>
+              <div className="overflow-x-auto -mx-2 sm:-mx-0 rounded-lg">
+                <div className="w-full min-w-[640px]">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Title
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Subject
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Class
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Slides
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Created
+                        </th>
+                        <th scope="col" className="relative px-6 py-3">
+                          <span className="sr-only">Actions</span>
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {formattedPresentations.map((presentation) => (
+                        <tr key={presentation.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">{presentation.title}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{presentation.subject}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{presentation.class}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{presentation.slideCount}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{presentation.createdAt}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex justify-end space-x-2">
+                              <button
+                                onClick={() => handleView(presentation.id)}
+                                className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300"
+                                title="View"
+                              >
+                                <Eye className="h-5 w-5 transition-transform duration-200 hover:scale-110" />
+                                <span className="sr-only">View</span>
+                              </button>
+                              <button
+                                onClick={() => handleDelete(presentation.id)}
+                                className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                title="Delete"
+                              >
+                                <Trash2 className="h-5 w-5 transition-transform duration-200 hover:scale-110" />
+                                <span className="sr-only">Delete</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {formattedPresentations.map((presentation) => (
-                <div 
-                  key={presentation.id} 
-                  className="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden hover:shadow-md transition-shadow duration-200"
-                >
-                  <div className="p-5">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white truncate mb-1">
-                      {presentation.title}
-                    </h3>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                        {presentation.subject}
-                      </span>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                        {presentation.class}
-                      </span>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                        {presentation.slideCount} slides
-                      </span>
-                    </div>
-                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-4">
-                      <span>Created: {presentation.createdAt}</span>
-                    </div>
-                    <div className="flex justify-between mt-4">
-                      <button
-                        onClick={() => handleView(presentation.id)}
-                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-transform duration-200 hover:scale-105"
-                        title="View"
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </button>
-                      <button
-                        onClick={() => handleDelete(presentation.id)}
-                        className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm leading-4 font-medium rounded-md text-red-600 dark:text-red-400 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-transform duration-200 hover:scale-105"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
-                      </button>
+            <div className="w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {formattedPresentations.map((presentation) => (
+                  <div 
+                    key={presentation.id} 
+                    className="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden hover:shadow-md transition-shadow duration-200"
+                  >
+                    <div className="p-5">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white truncate mb-1">
+                        {presentation.title}
+                      </h3>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                          {presentation.subject}
+                        </span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                          {presentation.class}
+                        </span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                          {presentation.slideCount} slides
+                        </span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        <span>Created: {presentation.createdAt}</span>
+                      </div>
+                      <div className="flex justify-between mt-4">
+                        <button
+                          onClick={() => handleView(presentation.id)}
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-transform duration-200 hover:scale-105"
+                          title="View"
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </button>
+                        <button
+                          onClick={() => handleDelete(presentation.id)}
+                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm leading-4 font-medium rounded-md text-red-600 dark:text-red-400 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-transform duration-200 hover:scale-105"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </div>

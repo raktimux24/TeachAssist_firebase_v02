@@ -8,7 +8,8 @@ import {
   X,
   FileQuestion,
   BookMarked,
-  Presentation
+  Presentation,
+  Layers
 } from 'lucide-react';
 
 const navigation = [
@@ -18,6 +19,7 @@ const navigation = [
   { name: 'Class Notes', href: '/teacher/notes', icon: BookMarked },
   { name: 'Presentations', href: '/teacher/presentations', icon: Presentation },
   { name: 'Question Sets', href: '/teacher/question-sets', icon: FileQuestion },
+  { name: 'Flashcards', href: '/teacher/flashcards', icon: Layers },
   { name: 'My Resources', href: '/teacher/resources', icon: FileText },
 ];
 

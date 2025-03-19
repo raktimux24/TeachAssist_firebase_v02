@@ -21,8 +21,9 @@ interface ClassNotesTableProps {
 export default function ClassNotesTable({ notes, onDelete, onView }: ClassNotesTableProps) {
   return (
     <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+      <div className="overflow-x-auto -mx-2 sm:-mx-0">
+        <div className="w-full min-w-[640px]">
+          <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
               <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white sm:pl-6">
@@ -109,6 +110,7 @@ export default function ClassNotesTable({ notes, onDelete, onView }: ClassNotesT
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
