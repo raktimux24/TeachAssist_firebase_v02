@@ -327,17 +327,95 @@ export const updateLessonPlan = async (lessonPlan: LessonPlan): Promise<boolean>
 const createSystemPrompt = (options: LessonPlanGenerationOptions): string => {
   const formatDescription = getFormatDescription(options.format);
   
-  return `You are an expert educational content creator specializing in creating high-quality lesson plans for teachers.
-Your task is to generate a comprehensive lesson plan based on the PDF content that will be provided.
-The lesson plan should be tailored for ${options.class} teachers teaching ${options.subject}.
+  return `You are an expert educational content designer specialized in creating comprehensive lesson plans and presentation slide decks from academic content. Your task is to analyze PDF documents and transform them into detailed, structured educational materials based on user specifications.
 
-The lesson plan should follow the "${formatDescription}" approach and be designed for ${options.numberOfClasses} class period(s).
+WORKFLOW:
+1. Analyze the provided PDF content thoroughly
+2. Structure the presentation according to the specified organization type
+3. Create a detailed lesson plan with all required components
+4. Design the requested number of slides that align with the lesson plan
+5. Apply the selected template style
+6. Incorporate any additional instructions provided by the user
 
-${options.learningObjectives ? `Learning Objectives: ${options.learningObjectives}` : ''}
-${options.requiredResources ? `Required Resources: ${options.requiredResources}` : ''}
+INPUT VARIABLES:
+- Class: ${options.class} - The educational level for which the materials are intended
+- Subject: ${options.subject} - The academic subject being covered
+- Chapters: ${options.chapters.join(', ')} - The specific chapters or sections from the PDF to include
+- Format: "${options.format}" - The format to follow (general or subject-specific)
+- Number of Classes: ${options.numberOfClasses} - The target number of classes to plan for
+${options.learningObjectives ? `- Learning Objectives: ${options.learningObjectives}` : ''}
+${options.requiredResources ? `- Required Resources: ${options.requiredResources}` : ''}
 
-${getFormatGuidance()}
+LESSON PLAN COMPONENTS:
+1. Lesson Overview:
+   - Title
+   - Grade/Class level
+   - Duration/Time allocation
+   - NCERT learning outcomes alignment
+   - Competency codes (where applicable)
 
+2. Learning Objectives:
+   - Knowledge objectives (what students will know)
+   - Skill objectives (what students will be able to do)
+   - Attitude objectives (values/perspectives students will develop)
+   - Higher-order thinking skills to be developed
+
+3. Materials and Resources:
+   - Required textbooks/reference materials
+   - Worksheets/handouts (with descriptions)
+   - Digital tools/software
+   - Equipment/manipulatives
+   - Visual aids/models
+   - Online resources/links
+
+4. Lesson Structure:
+   - Warm-up/Introduction (5-10 minutes)
+   - Main instructional components with timeframes
+   - Student activities with detailed descriptions
+   - Transitions between activities
+   - Closure/conclusion activities
+   - Homework assignment (if applicable)
+
+5. Teaching Methodologies:
+   - Specific instructional strategies (e.g., direct instruction, inquiry-based, collaborative learning)
+   - Differentiation approaches for diverse learners
+   - Scaffolding techniques
+   - Questions to promote critical thinking
+   - Discussion prompts
+
+6. Assessment Strategies:
+   - Formative assessment methods with examples
+   - Summative assessment criteria
+   - Rubrics or marking schemes
+   - Self/peer assessment opportunities
+   - Success criteria for students
+
+7. Extensions and Connections:
+   - Cross-curricular links
+   - Real-world applications
+   - Extension activities for advanced learners
+   - Remedial activities for struggling students
+   - Follow-up lesson connections
+
+PRESENTATION TYPES:
+- Slide by Slide: Create detailed slides that follow the lesson plan chronologically, with each instructional segment having dedicated slides
+- Topic Wise: Organize content by specific topics within the lesson, with dedicated slides for each key concept or skill area
+- Chapter Wise: Provide comprehensive overviews that align with textbook chapters, highlighting major points and lesson sequences
+- Unit Wise: Create broader coverage combining related lessons into cohesive units
+- Lesson Wise: Develop focused content for individual lessons with detailed teaching and learning activities
+- Concept Wise: Offer deep dives into specific concepts with detailed explanations and applications
+
+SLIDE CREATION GUIDELINES:
+1. Each slide should have a clear title that communicates its main focus
+2. Include only essential content - avoid text-heavy slides
+3. Use bullet points for clarity when appropriate
+4. Include relevant visuals, diagrams, or charts that enhance understanding
+5. Maintain consistent formatting throughout the presentation
+6. Ensure proper flow and logical transitions between slides
+7. Add slide numbers and maintain consistent headers/footers if specified in the template
+8. Include slides specifically for learning objectives, materials, key teaching points, assessment strategies, and conclusion
+
+OUTPUT FORMAT:
 Format your response as a JSON object with the following structure:
 {
   "title": "Lesson Plan title",
@@ -346,17 +424,38 @@ Format your response as a JSON object with the following structure:
   "chapters": [${options.chapters.map(chapter => `"${chapter}"`).join(', ')}],
   "format": "${options.format}",
   "numberOfClasses": ${options.numberOfClasses},
-  "learningObjectives": "${options.learningObjectives}",
-  "requiredResources": "${options.requiredResources}",
+  "learningObjectives": "${options.learningObjectives || ''}",
+  "requiredResources": "${options.requiredResources || ''}",
   "sections": [
     {
       "id": "1",
-      "title": "Section title",
-      "content": "Content of the section with appropriate markdown formatting"
+      "title": "Lesson Overview",
+      "content": "Content with proper markdown formatting..."
     },
-    ...more sections
+    {
+      "id": "2", 
+      "title": "Learning Objectives",
+      "content": "Content with proper markdown formatting..."
+    },
+    // Include all necessary sections following the LESSON PLAN COMPONENTS structure above
+    // Add a dedicated Presentation Slides section with slide content and notes
   ]
 }
+
+For the presentation slides section, include:
+- Title slide (including subject, chapter(s), and class level)
+- Agenda/overview slide
+- Learning objectives slide
+- Materials and resources slide
+- Content slides (formatted according to the appropriate presentation type)
+- Assessment strategies slide
+- Summary/conclusion slide
+
+For each slide, provide:
+- Slide title
+- Slide content (text, bullet points, etc.)
+- Description of any visuals or diagrams to include
+- Speaker notes with additional context or explanation
 
 Important formatting guidelines:
 1. Use proper markdown formatting for the content field in each section
@@ -367,6 +466,17 @@ Important formatting guidelines:
 6. For tables, use markdown table syntax
 7. Ensure the content is comprehensive, clear, and educationally valuable
 
+ADDITIONAL CAPABILITIES:
+- Adapt language complexity based on the specified class level
+- Highlight key terms, definitions, and concepts
+- Suggest appropriate visual elements for complex topics
+- Recommend interactive elements or discussion questions
+- Structure content to support different learning styles
+- Include practical assessment examples and success criteria
+- Provide detailed guidance for teachers on implementation
+
+Maintain academic accuracy while making the content accessible and engaging for the specified educational level. Ensure all lesson plans align with current educational best practices and CBSE/NCERT guidelines where applicable.
+
 IMPORTANT: Your response must be a valid JSON object without any additional text before or after it.`;
 };
 
@@ -374,15 +484,43 @@ IMPORTANT: Your response must be a valid JSON object without any additional text
  * Creates the user prompt for the OpenAI API
  */
 const createUserPrompt = (options: LessonPlanGenerationOptions, pdfUrls: string[]): string => {
-  return `Please create a lesson plan for ${options.class} ${options.subject} covering the following chapters: ${options.chapters.join(', ')}.
+  return `Please create a detailed, comprehensive lesson plan for ${options.class} ${options.subject} covering the following chapters: ${options.chapters.join(', ')}.
   
 The content is available in the following PDF files:
 ${pdfUrls.map(url => `- ${url}`).join('\n')}
 
-You need to parse these PDFs and extract the relevant information to create a lesson plan according to my requirements.
-Please make sure the lesson plan is accurate, comprehensive, and follows educational best practices.
+IMPORTANT: I need HIGHLY DETAILED content for each section of the lesson plan. For each component:
 
-Remember to format your response as a valid JSON object with the structure I specified.`;
+1. Lesson Overview - Include detailed information about duration, grade level, and alignment with NCERT outcomes.
+
+2. Learning Objectives - Provide specific, measurable objectives covering knowledge, skills, and attitudes students will develop. Don't be vague; list exactly what students will know and be able to do.
+
+3. Materials and Resources - List ALL specific materials needed with detailed descriptions (e.g., specific worksheets, digital tools, equipment, models, and links).
+
+4. Lesson Structure - Include detailed descriptions of:
+   - Warm-up activities with exact questions/prompts
+   - Main instructional components with precise timeframes
+   - Detailed explanations of student activities (not just "group work" but what they'll do and discuss)
+   - Clear transitions between activities
+   - Specific closure activities
+   - Exact homework assignments if applicable
+
+5. Teaching Methodologies - Outline specific instructional strategies with examples of implementation, differentiation approaches for different learner types, detailed scaffolding techniques, and at least 5-7 critical thinking questions.
+
+6. Assessment Strategies - Include detailed formative and summative assessment methods, specific rubrics or marking criteria, and clear success criteria for students.
+
+7. Extensions and Connections - Provide specific cross-curricular links, real-world applications, and targeted extension activities.
+
+For the presentation slides section, include comprehensive content for each slide, with detailed speaker notes that provide teaching guidance.
+
+Ensure the content is:
+- Highly specific (not generic)
+- Curriculum-aligned
+- Age-appropriate for ${options.class}
+- Pedagogically sound
+- Practically implementable in a classroom setting
+
+Remember to format your response as a valid JSON object with the structure I specified. Include extensive, detailed content for EACH section.`;
 };
 
 /**

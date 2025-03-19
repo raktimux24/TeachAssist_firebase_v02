@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TeacherLayout from '../../components/teacher/TeacherLayout';
 import LessonPlansFilters from '../../components/teacher/lesson-plans/LessonPlansFilters';
@@ -120,13 +120,13 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
 
   return (
     <TeacherLayout isDarkMode={isDarkMode} onThemeToggle={onThemeToggle}>
-      <div className="space-y-4 sm:space-y-6 w-full px-2 sm:px-0">
+      <div className="space-y-4 sm:space-y-6 w-full px-4 sm:px-6 md:px-0 max-w-[100vw] overflow-hidden">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white truncate">
             Lesson Plans
           </h1>
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
             <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 p-1 rounded-md shadow-sm">
               <button
                 onClick={() => setViewMode('table')}
@@ -176,38 +176,38 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
         {/* Content Section */}
         <div className="min-h-[300px] w-full">
           {loading ? (
-            <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-6 sm:p-8 text-center">
+            <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-4 sm:p-6 md:p-8 text-center">
               <div className="flex flex-col items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-4"></div>
+                <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary-600 mb-3 sm:mb-4"></div>
                 <p className="text-gray-500 dark:text-gray-400">
                   Loading lesson plans...
                 </p>
               </div>
             </div>
           ) : error ? (
-            <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-6 sm:p-8 text-center">
+            <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-4 sm:p-6 md:p-8 text-center">
               <p className="text-red-500 dark:text-red-400">
                 {error}
               </p>
             </div>
           ) : formattedPlans.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-6 sm:p-8 text-center">
+            <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-4 sm:p-6 md:p-8 text-center">
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 No lesson plans found. Create your first lesson plan to get started.
               </p>
               <button
                 onClick={() => navigate('/teacher/content/lesson-plans')}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent shadow-sm text-xs sm:text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
-                <Plus className="-ml-1 mr-2 h-5 w-5" />
+                <Plus className="-ml-1 mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                 Create New Lesson Plan
               </button>
             </div>
           ) : (
             <div className="transition-all duration-300 w-full">
               {viewMode === 'table' ? (
-                <div className="overflow-x-auto -mx-2 sm:-mx-0 rounded-lg">
-                  <div className="w-full min-w-[640px]">
+                <div className="overflow-x-auto -mx-4 sm:-mx-0 rounded-lg">
+                  <div className="w-full min-w-[640px] pb-2">
                     <LessonPlansTable
                       plans={formattedPlans}
                       onEdit={handleEdit}
@@ -217,7 +217,7 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
                   </div>
                 </div>
               ) : (
-                <div className="w-full">
+                <div className="w-full px-1 sm:px-0">
                   <LessonPlansGrid
                     plans={formattedPlans}
                     onEdit={handleEdit}

@@ -116,13 +116,13 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
 
   return (
     <TeacherLayout isDarkMode={isDarkMode} onThemeToggle={onThemeToggle}>
-      <div className="space-y-4 sm:space-y-6 w-full px-2 sm:px-0">
+      <div className="space-y-4 sm:space-y-6 w-full px-4 sm:px-6 md:px-0 max-w-[100vw] overflow-hidden">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white truncate">
             Presentations
           </h1>
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-between sm:justify-end">
             <button
               onClick={() => setViewMode('table')}
               className={`p-2 rounded-md ${
@@ -156,8 +156,8 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
         </div>
 
         {/* Filters Section */}
-        <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             {/* Search Input */}
             <div className="relative flex-grow">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -238,56 +238,56 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
         {/* Content Section */}
         <div className="min-h-[300px] w-full">
           {loading ? (
-            <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-6 sm:p-8 text-center">
+            <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-4 sm:p-6 text-center">
               <div className="flex flex-col items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-4"></div>
+                <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary-600 mb-3 sm:mb-4"></div>
                 <p className="text-gray-500 dark:text-gray-400">
                   Loading presentations...
                 </p>
               </div>
             </div>
           ) : error ? (
-            <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-6 sm:p-8 text-center">
+            <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-4 sm:p-6 text-center">
               <p className="text-red-500 dark:text-red-400">
                 {error}
               </p>
             </div>
           ) : formattedPresentations.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-6 sm:p-8 text-center">
+            <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-4 sm:p-6 text-center">
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 No presentations found. Create your first presentation to get started.
               </p>
               <button
                 onClick={() => navigate('/teacher/content/presentations')}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent shadow-sm text-xs sm:text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
-                <Plus className="-ml-1 mr-2 h-5 w-5" />
+                <Plus className="-ml-1 mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                 Create New Presentation
               </button>
             </div>
           ) : viewMode === 'table' ? (
             <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg overflow-hidden">
-              <div className="overflow-x-auto -mx-2 sm:-mx-0 rounded-lg">
-                <div className="w-full min-w-[640px]">
+              <div className="overflow-x-auto -mx-4 sm:-mx-0 rounded-lg">
+                <div className="w-full min-w-[640px] pb-2">
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th scope="col" className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Title
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th scope="col" className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Subject
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th scope="col" className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Class
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th scope="col" className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Slides
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th scope="col" className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Created
                         </th>
-                        <th scope="col" className="relative px-6 py-3">
+                        <th scope="col" className="relative px-3 sm:px-6 py-2 sm:py-3">
                           <span className="sr-only">Actions</span>
                         </th>
                       </tr>
@@ -338,8 +338,8 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
               </div>
             </div>
           ) : (
-            <div className="w-full">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="w-full px-1 sm:px-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {formattedPresentations.map((presentation) => (
                   <div 
                     key={presentation.id} 

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Eye, Trash2, FileQuestion } from 'lucide-react';
 
 interface QuestionSet {
@@ -20,19 +20,19 @@ interface QuestionSetsGridProps {
 
 export default function QuestionSetsGrid({ sets, onDelete, onView }: QuestionSetsGridProps) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
       {sets.map((set) => (
         <div 
           key={set.id} 
           className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg overflow-hidden flex flex-col"
         >
-          <div className="p-4 flex-grow">
+          <div className="p-3 sm:p-4 flex-grow">
             <div className="flex items-start justify-between">
               <div className="flex items-center">
-                <div className="p-2 rounded-full bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400 mr-3">
-                  <FileQuestion className="h-5 w-5" />
+                <div className="p-1.5 sm:p-2 rounded-full bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400 mr-2 sm:mr-3">
+                  <FileQuestion className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white truncate" title={set.title}>
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white truncate" title={set.title}>
                   {set.title}
                 </h3>
               </div>
@@ -59,7 +59,7 @@ export default function QuestionSetsGrid({ sets, onDelete, onView }: QuestionSet
             </div>
             
             {set.tags.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1">
+              <div className="mt-2 sm:mt-3 flex flex-wrap gap-1">
                 {set.tags.slice(0, 3).map((tag, index) => (
                   <span 
                     key={index} 
@@ -77,19 +77,19 @@ export default function QuestionSetsGrid({ sets, onDelete, onView }: QuestionSet
             )}
           </div>
           
-          <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750 px-4 py-3 flex justify-end space-x-3">
+          <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750 px-3 sm:px-4 py-2 sm:py-3 flex justify-end space-x-2 sm:space-x-3">
             <button
               onClick={() => onView(set.id)}
               className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-primary-700 bg-primary-100 hover:bg-primary-200 dark:text-primary-300 dark:bg-primary-900 dark:hover:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
-              <Eye className="h-4 w-4 mr-1" />
+              <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
               View
             </button>
             <button
               onClick={() => onDelete(set.id)}
               className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 dark:text-red-300 dark:bg-red-900 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
             >
-              <Trash2 className="h-4 w-4 mr-1" />
+              <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
               Delete
             </button>
           </div>

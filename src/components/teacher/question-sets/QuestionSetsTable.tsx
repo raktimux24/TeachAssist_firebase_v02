@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Eye, Trash2 } from 'lucide-react';
 
 interface QuestionSet {
@@ -24,25 +24,25 @@ export default function QuestionSetsTable({ sets, onDelete, onView }: QuestionSe
       <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
         <thead className="bg-gray-50 dark:bg-gray-800">
           <tr>
-            <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white sm:pl-6">
+            <th scope="col" className="py-2.5 sm:py-3.5 pl-3 sm:pl-4 pr-2 sm:pr-3 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white sm:pl-6">
               Title
             </th>
-            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
+            <th scope="col" className="px-2 sm:px-3 py-2.5 sm:py-3.5 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
               Subject
             </th>
-            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
+            <th scope="col" className="px-2 sm:px-3 py-2.5 sm:py-3.5 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
               Class
             </th>
-            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
+            <th scope="col" className="px-2 sm:px-3 py-2.5 sm:py-3.5 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
               Difficulty
             </th>
-            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
+            <th scope="col" className="px-2 sm:px-3 py-2.5 sm:py-3.5 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
               Questions
             </th>
-            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
+            <th scope="col" className="px-2 sm:px-3 py-2.5 sm:py-3.5 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
               Created
             </th>
-            <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+            <th scope="col" className="relative py-2.5 sm:py-3.5 pl-2 sm:pl-3 pr-3 sm:pr-4 sm:pr-6">
               <span className="sr-only">Actions</span>
             </th>
           </tr>
@@ -50,16 +50,16 @@ export default function QuestionSetsTable({ sets, onDelete, onView }: QuestionSe
         <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
           {sets.map((set) => (
             <tr key={set.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-              <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-6">
+              <td className="whitespace-nowrap py-3 sm:py-4 pl-3 sm:pl-4 pr-2 sm:pr-3 text-xs sm:text-sm font-medium text-gray-900 dark:text-white sm:pl-6">
                 {set.title}
               </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+              <td className="whitespace-nowrap px-2 sm:px-3 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                 {set.subject}
               </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+              <td className="whitespace-nowrap px-2 sm:px-3 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                 {set.class}
               </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm">
+              <td className="whitespace-nowrap px-2 sm:px-3 py-3 sm:py-4 text-xs sm:text-sm">
                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                   ${set.difficulty === 'easy' 
                     ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' 
@@ -70,20 +70,20 @@ export default function QuestionSetsTable({ sets, onDelete, onView }: QuestionSe
                   {set.difficulty.charAt(0).toUpperCase() + set.difficulty.slice(1)}
                 </span>
               </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+              <td className="whitespace-nowrap px-2 sm:px-3 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                 {set.questionCount}
               </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+              <td className="whitespace-nowrap px-2 sm:px-3 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                 {set.createdAt}
               </td>
-              <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+              <td className="relative whitespace-nowrap py-3 sm:py-4 pl-2 sm:pl-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium sm:pr-6">
                 <div className="flex justify-end space-x-2">
                   <button
                     onClick={() => onView(set.id)}
                     className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300"
                     title="View"
                   >
-                    <Eye className="h-5 w-5" />
+                    <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span className="sr-only">View</span>
                   </button>
                   <button
@@ -91,7 +91,7 @@ export default function QuestionSetsTable({ sets, onDelete, onView }: QuestionSe
                     className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                     title="Delete"
                   >
-                    <Trash2 className="h-5 w-5" />
+                    <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span className="sr-only">Delete</span>
                   </button>
                 </div>
