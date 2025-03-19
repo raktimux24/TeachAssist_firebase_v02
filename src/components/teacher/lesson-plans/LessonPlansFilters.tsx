@@ -51,7 +51,7 @@ export default function LessonPlansFilters({
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
           {/* Subject Filter */}
           <div>
             <label htmlFor="subject-filter" className="sr-only">Subject</label>
@@ -59,7 +59,7 @@ export default function LessonPlansFilters({
               id="subject-filter"
               value={selectedSubject}
               onChange={(e) => onSubjectChange(e.target.value)}
-              className="block w-full pl-3 pr-8 sm:pr-10 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               {subjects.map((subject) => (
                 <option key={subject} value={subject}>
@@ -76,7 +76,7 @@ export default function LessonPlansFilters({
               id="class-filter"
               value={selectedClass}
               onChange={(e) => onClassChange(e.target.value)}
-              className="block w-full pl-3 pr-8 sm:pr-10 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               {classes.map((classLevel) => (
                 <option key={classLevel} value={classLevel}>
@@ -93,7 +93,7 @@ export default function LessonPlansFilters({
               id="status-filter"
               value={selectedStatus}
               onChange={(e) => onStatusChange(e.target.value)}
-              className="block w-full pl-3 pr-8 sm:pr-10 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               {statuses.map((status) => (
                 <option key={status} value={status}>
@@ -110,7 +110,7 @@ export default function LessonPlansFilters({
               id="sort-filter"
               value={sortBy}
               onChange={(e) => onSortChange(e.target.value)}
-              className="block w-full pl-3 pr-8 sm:pr-10 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               {sortOptions.map((option) => (
                 <option key={option.value} value={option.value}>

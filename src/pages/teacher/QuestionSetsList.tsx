@@ -1,36 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TeacherLayout from '../../components/teacher/TeacherLayout';
-import LessonPlansFilters from '../../components/teacher/lesson-plans/LessonPlansFilters';
-import LessonPlansTable from '../../components/teacher/lesson-plans/LessonPlansTable';
-import LessonPlansGrid from '../../components/teacher/lesson-plans/LessonPlansGrid';
-import LessonPlansActionPanel from '../../components/teacher/lesson-plans/LessonPlansActionPanel';
-import { getUserLessonPlans, LessonPlan } from '../../services/lessonPlanGeneration';
+import QuestionSetsFilters from '../../components/teacher/question-sets/QuestionSetsFilters';
+import QuestionSetsTable from '../../components/teacher/question-sets/QuestionSetsTable';
+import QuestionSetsGrid from '../../components/teacher/question-sets/QuestionSetsGrid';
+import QuestionSetsActionPanel from '../../components/teacher/question-sets/QuestionSetsActionPanel';
+import { getUserQuestionSets, QuestionSet } from '../../services/questionSetGeneration';
 import { useAuth } from '../../contexts/AuthContext';
 import { LayoutGrid, List, Plus } from 'lucide-react';
 
-interface LessonPlansListProps {
+interface QuestionSetsListProps {
   isDarkMode: boolean;
   onThemeToggle: () => void;
 }
 
-export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPlansListProps) {
+export default function QuestionSetsList({ isDarkMode, onThemeToggle }: QuestionSetsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedClass, setSelectedClass] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
-  const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
+  const [questionSets, setQuestionSets] = useState<QuestionSet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   const { userInfo } = useAuth();
   const navigate = useNavigate();
 
-  // Fetch lesson plans when component mounts or when user changes
+  // Fetch question sets when component mounts or when user changes
   useEffect(() => {
-    const fetchLessonPlans = async () => {
+    const fetchQuestionSets = async () => {
       if (!userInfo?.uid) {
         setLoading(false);
         return;
@@ -39,41 +39,42 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
       try {
         setLoading(true);
         setError(null);
-        const plans = await getUserLessonPlans(userInfo.uid);
-        setLessonPlans(plans);
+        const sets = await getUserQuestionSets(userInfo.uid);
+        setQuestionSets(sets);
       } catch (err) {
-        console.error('Error fetching lesson plans:', err);
-        setError('Failed to load lesson plans. Please try again later.');
+        console.error('Error fetching question sets:', err);
+        setError('Failed to load question sets. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchLessonPlans();
+    fetchQuestionSets();
   }, [userInfo?.uid]);
 
-  // Filter and sort lesson plans based on user selections
-  const filteredAndSortedPlans = lessonPlans
-    .filter(plan => {
+  // Filter and sort question sets based on user selections
+  const filteredAndSortedSets = questionSets
+    .filter(set => {
       // Filter by search query (title, subject, class)
       const matchesSearch = searchQuery === '' || 
-        (plan.title && plan.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (plan.subject && plan.subject.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (plan.class && plan.class.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (plan.chapters && plan.chapters.some(chapter => chapter.toLowerCase().includes(searchQuery.toLowerCase())));
+        (set.title && set.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (set.subject && set.subject.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (set.class && set.class.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (set.chapters && set.chapters.some(chapter => chapter.toLowerCase().includes(searchQuery.toLowerCase())));
       
       // Filter by subject
       const matchesSubject = selectedSubject === 'all' || 
-        (plan.subject && plan.subject.toLowerCase() === selectedSubject.toLowerCase());
+        (set.subject && set.subject.toLowerCase() === selectedSubject.toLowerCase());
       
       // Filter by class
       const matchesClass = selectedClass === 'all' || 
-        (plan.class && plan.class.toLowerCase() === selectedClass.toLowerCase());
+        (set.class && set.class.toLowerCase() === selectedClass.toLowerCase());
       
-      // Filter by status (assuming we add a status field to lesson plans in the future)
-      const matchesStatus = selectedStatus === 'all'; // For now, we don't have a status field
+      // Filter by difficulty
+      const matchesDifficulty = selectedDifficulty === 'all' || 
+        (set.difficulty && set.difficulty.toLowerCase() === selectedDifficulty.toLowerCase());
       
-      return matchesSearch && matchesSubject && matchesClass && matchesStatus;
+      return matchesSearch && matchesSubject && matchesClass && matchesDifficulty;
     })
     .sort((a, b) => {
       // Sort by selected sort option
@@ -90,32 +91,28 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
       return 0;
     });
 
-  // Convert lesson plans to the format expected by the components
-  const formattedPlans = filteredAndSortedPlans.map(plan => ({
-    id: plan.firebaseId || '',
-    title: plan.title || 'Untitled Lesson Plan',
-    subject: plan.subject || 'No Subject',
-    class: plan.class || 'No Class',
-    duration: `${plan.numberOfClasses || 1} ${(plan.numberOfClasses || 1) > 1 ? 'classes' : 'class'}`,
-    createdAt: plan.createdAt instanceof Date ? plan.createdAt.toLocaleDateString() : 'Unknown Date',
-    status: 'published' as const, // For now, all plans are considered published
-    tags: Array.isArray(plan.chapters) ? plan.chapters : []
+  // Convert question sets to the format expected by the components
+  const formattedSets = filteredAndSortedSets.map(set => ({
+    id: set.firebaseId || '',
+    title: set.title || 'Untitled Question Set',
+    subject: set.subject || 'No Subject',
+    class: set.class || 'No Class',
+    difficulty: set.difficulty || 'medium',
+    questionCount: set.questions?.length || 0,
+    createdAt: set.createdAt instanceof Date ? set.createdAt.toLocaleDateString() : 'Unknown Date',
+    tags: Array.isArray(set.chapters) ? set.chapters : []
   }));
 
   // Handle edit, delete, and view actions
-  const handleEdit = (id: string) => {
-    navigate(`/teacher/content/lesson-plans/edit/${id}`);
-  };
-
   const handleDelete = (id: string) => {
     // TODO: Implement delete functionality
-    console.log('Delete lesson plan:', id);
-    // After confirmation, remove the plan from state
-    setLessonPlans(prev => prev.filter(plan => plan.firebaseId !== id));
+    console.log('Delete question set:', id);
+    // After confirmation, remove the set from state
+    setQuestionSets(prev => prev.filter(set => set.firebaseId !== id));
   };
 
   const handleView = (id: string) => {
-    navigate(`/teacher/content/lesson-plans/view/${id}`);
+    navigate(`/teacher/content/question-sets/results/${id}`);
   };
 
   return (
@@ -124,7 +121,7 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
-            Lesson Plans
+            Question Sets
           </h1>
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
             <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 p-1 rounded-md shadow-sm">
@@ -154,21 +151,21 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
               </button>
             </div>
             <div className="flex-shrink-0">
-              <LessonPlansActionPanel />
+              <QuestionSetsActionPanel />
             </div>
           </div>
         </div>
 
         {/* Filters Section */}
-        <LessonPlansFilters
+        <QuestionSetsFilters
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           selectedSubject={selectedSubject}
           onSubjectChange={setSelectedSubject}
           selectedClass={selectedClass}
           onClassChange={setSelectedClass}
-          selectedStatus={selectedStatus}
-          onStatusChange={setSelectedStatus}
+          selectedDifficulty={selectedDifficulty}
+          onDifficultyChange={setSelectedDifficulty}
           sortBy={sortBy}
           onSortChange={setSortBy}
         />
@@ -180,7 +177,7 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
               <div className="flex flex-col items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-4"></div>
                 <p className="text-gray-500 dark:text-gray-400">
-                  Loading lesson plans...
+                  Loading question sets...
                 </p>
               </div>
             </div>
@@ -190,17 +187,17 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
                 {error}
               </p>
             </div>
-          ) : formattedPlans.length === 0 ? (
+          ) : formattedSets.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-6 sm:p-8 text-center">
               <p className="text-gray-500 dark:text-gray-400 mb-4">
-                No lesson plans found. Create your first lesson plan to get started.
+                No question sets found. Create your first question set to get started.
               </p>
               <button
-                onClick={() => navigate('/teacher/content/lesson-plans')}
+                onClick={() => navigate('/teacher/content/question-sets')}
                 className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
                 <Plus className="-ml-1 mr-2 h-5 w-5" />
-                Create New Lesson Plan
+                Create New Question Set
               </button>
             </div>
           ) : (
@@ -208,9 +205,8 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
               {viewMode === 'table' ? (
                 <div className="overflow-x-auto -mx-2 sm:-mx-0 rounded-lg">
                   <div className="w-full min-w-[640px]">
-                    <LessonPlansTable
-                      plans={formattedPlans}
-                      onEdit={handleEdit}
+                    <QuestionSetsTable
+                      sets={formattedSets}
                       onDelete={handleDelete}
                       onView={handleView}
                     />
@@ -218,9 +214,8 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
                 </div>
               ) : (
                 <div className="w-full">
-                  <LessonPlansGrid
-                    plans={formattedPlans}
-                    onEdit={handleEdit}
+                  <QuestionSetsGrid
+                    sets={formattedSets}
                     onDelete={handleDelete}
                     onView={handleView}
                   />

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BookOpen, GraduationCap, Layers, PenTool, FileText, Brain, Presentation, Slash as FlashCard } from 'lucide-react';
 
 interface ContentType {
@@ -7,6 +8,7 @@ interface ContentType {
   description: string;
   icon: React.ElementType;
   features: string[];
+  route: string;
 }
 
 const contentTypes: ContentType[] = [
@@ -16,6 +18,7 @@ const contentTypes: ContentType[] = [
     description: 'Generate multiple-choice or fill-in-the-blank questions aligned to the curriculum',
     icon: PenTool,
     features: ['Multiple choice', 'Fill in the blanks', 'Short answers', 'Automatic grading'],
+    route: '/teacher/content/question-sets'
   },
   {
     id: 'lesson-plans',
@@ -23,6 +26,7 @@ const contentTypes: ContentType[] = [
     description: 'Create comprehensive lesson plans tailored to the selected subject',
     icon: BookOpen,
     features: ['Learning objectives', 'Activity timeline', 'Resource lists', 'Assessment criteria'],
+    route: '/teacher/content/lesson-plans'
   },
   {
     id: 'class-notes',
@@ -30,6 +34,7 @@ const contentTypes: ContentType[] = [
     description: 'Produce detailed class notes summarizing key topics',
     icon: FileText,
     features: ['Key concepts', 'Examples', 'Practice problems', 'Visual aids'],
+    route: '/teacher/content/notes'
   },
   {
     id: 'presentations',
@@ -37,6 +42,7 @@ const contentTypes: ContentType[] = [
     description: 'Automatically generate engaging slide decks',
     icon: Presentation,
     features: ['Visual slides', 'Speaker notes', 'Interactive elements', 'Export options'],
+    route: '/teacher/content/presentations'
   },
   {
     id: 'flashcards',
@@ -44,6 +50,7 @@ const contentTypes: ContentType[] = [
     description: 'Create interactive flashcards for quick revision',
     icon: Brain,
     features: ['Term definitions', 'Concept pairs', 'Image support', 'Review tracking'],
+    route: '/teacher/content/flashcards'
   },
 ];
 
@@ -61,6 +68,7 @@ const chapters = {
 };
 
 export default function ContentGenerationSelector() {
+  const navigate = useNavigate();
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
@@ -97,19 +105,7 @@ export default function ContentGenerationSelector() {
                 </p>
 
                 <button
-                  onClick={() => {
-                    if (type.id === 'question-sets') {
-                      window.location.href = '/teacher/content/question-sets';
-                    } else if (type.id === 'presentations') {
-                      window.location.href = '/teacher/content/presentations';
-                    } else if (type.id === 'flashcards') {
-                      window.location.href = '/teacher/content/flashcards';
-                    } else if (type.id === 'class-notes') {
-                      window.location.href = '/teacher/content/notes';
-                    } else if (type.id === 'lesson-plans') {
-                      window.location.href = '/teacher/content/lesson-plans';
-                    }
-                  }}
+                  onClick={() => navigate(type.route)}
                   className="w-full flex items-center justify-center px-4 py-2 mt-auto border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                 >
                   Generate {type.name}

@@ -1,36 +1,39 @@
 import React from 'react';
 import { BookOpen, Brain, FileText, PenTool } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface ActionButton {
   icon: React.ElementType;
   label: string;
-  onClick: () => void;
+  route: string;
 }
 
-const actions: ActionButton[] = [
-  {
-    icon: PenTool,
-    label: 'Question Sets',
-    onClick: () => console.log('Create question sets clicked'),
-  },
-  {
-    icon: Brain,
-    label: 'Flash Cards',
-    onClick: () => console.log('Generate flash cards clicked'),
-  },
-  {
-    icon: BookOpen,
-    label: 'Lesson Plan',
-    onClick: () => console.log('New lesson clicked'),
-  },
-  {
-    icon: FileText,
-    label: 'Class Notes',
-    onClick: () => console.log('Generate class notes clicked'),
-  },
-];
-
 export default function QuickActions() {
+  const navigate = useNavigate();
+  
+  const actions: ActionButton[] = [
+    {
+      icon: PenTool,
+      label: 'Question Sets',
+      route: '/teacher/content/question-sets',
+    },
+    {
+      icon: Brain,
+      label: 'Flash Cards',
+      route: '/teacher/content/flashcards',
+    },
+    {
+      icon: BookOpen,
+      label: 'Lesson Plan',
+      route: '/teacher/content/lesson-plans',
+    },
+    {
+      icon: FileText,
+      label: 'Class Notes',
+      route: '/teacher/content/notes',
+    },
+  ];
+
   return (
     <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
@@ -42,7 +45,7 @@ export default function QuickActions() {
           return (
             <button
               key={action.label}
-              onClick={action.onClick}
+              onClick={() => navigate(action.route)}
               className="flex items-center justify-center gap-2 p-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
             >
               <Icon className="h-5 w-5" />

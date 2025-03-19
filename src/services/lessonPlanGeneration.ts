@@ -1,6 +1,6 @@
 import { Resource } from '../types/resource';
 import { db } from '../firebase/config';
-import { collection, addDoc, serverTimestamp, DocumentReference, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, DocumentReference, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 
 export interface LessonPlanSection {
   id: string;
@@ -225,6 +225,99 @@ export const getUserLessonPlans = async (userId: string): Promise<LessonPlan[]> 
   } catch (error) {
     console.error('Error retrieving lesson plans:', error);
     return [];
+  }
+};
+
+/**
+ * Retrieves a specific lesson plan by its ID from Firestore
+ */
+export const getLessonPlanById = async (lessonPlanId: string): Promise<LessonPlan | null> => {
+  try {
+    if (!lessonPlanId) {
+      throw new Error('Lesson plan ID is required');
+    }
+    
+    // Reference to the specific document
+    const docRef = doc(db, 'lessonplan', lessonPlanId);
+    
+    // Get the document
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      console.error(`Lesson plan with ID ${lessonPlanId} not found`);
+      return null;
+    }
+    
+    const data = docSnap.data();
+    
+    // Convert Firestore timestamps to Date objects
+    const createdAt = data.createdAt?.toDate() || new Date();
+    
+    // Create a LessonPlan object from the document data
+    const lessonPlan: LessonPlan = {
+      title: data.title || '',
+      subject: data.subject || '',
+      class: data.class || '',
+      chapters: data.chapters || [],
+      format: data.format || 'general',
+      numberOfClasses: data.numberOfClasses || 1,
+      learningObjectives: data.learningObjectives,
+      requiredResources: data.requiredResources,
+      sections: data.sections || [],
+      createdAt: createdAt,
+      userId: data.userId,
+      firebaseId: docSnap.id
+    };
+    
+    console.log(`Retrieved lesson plan with ID ${lessonPlanId}`);
+    return lessonPlan;
+    
+  } catch (error) {
+    console.error(`Error retrieving lesson plan with ID ${lessonPlanId}:`, error);
+    return null;
+  }
+};
+
+/**
+ * Updates an existing lesson plan in Firestore
+ */
+export const updateLessonPlan = async (lessonPlan: LessonPlan): Promise<boolean> => {
+  try {
+    if (!lessonPlan.firebaseId) {
+      throw new Error('Lesson plan ID is required to update');
+    }
+    
+    console.log('Updating lesson plan with ID:', lessonPlan.firebaseId);
+    console.log('Update data:', JSON.stringify(lessonPlan, null, 2));
+    
+    // Reference to the specific document
+    const docRef = doc(db, 'lessonplan', lessonPlan.firebaseId);
+    
+    // Create a Firestore-friendly version of the lesson plan
+    const updatedData = {
+      title: lessonPlan.title,
+      subject: lessonPlan.subject,
+      class: lessonPlan.class,
+      chapters: lessonPlan.chapters,
+      format: lessonPlan.format,
+      numberOfClasses: lessonPlan.numberOfClasses,
+      learningObjectives: lessonPlan.learningObjectives,
+      requiredResources: lessonPlan.requiredResources,
+      sections: lessonPlan.sections,
+      updatedAt: serverTimestamp()
+    };
+    
+    console.log('Firestore update data prepared:', updatedData);
+    
+    // Update the document
+    await updateDoc(docRef, updatedData);
+    
+    console.log(`Successfully updated lesson plan with ID ${lessonPlan.firebaseId}`);
+    return true;
+    
+  } catch (error) {
+    console.error('Error updating lesson plan:', error);
+    return false;
   }
 };
 

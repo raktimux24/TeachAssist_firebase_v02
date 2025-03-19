@@ -463,12 +463,12 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 Question {index + 1}
               </h2>
-              <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm capitalize">
+              <span className="px-3 py-1 bg-primary-400/10 dark:bg-primary-700/20 text-primary-600 dark:text-primary-400 rounded-full text-sm capitalize">
                 {question.type.replace('-', ' ')}
               </span>
             </div>
             
-            <div className="prose dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-700 dark:prose-p:text-gray-300 max-w-none mb-4">
+            <div className="prose dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-primary-600 dark:prose-p:text-white max-w-none mb-4">
               <ReactMarkdown>{question.question}</ReactMarkdown>
             </div>
             
@@ -479,15 +479,15 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
                     key={optIndex} 
                     className={`p-3 rounded-lg border ${
                       showAnswers && question.answer === option
-                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                        ? 'bg-primary-400/10 dark:bg-primary-700/20 border-primary-400/30 dark:border-primary-700/50'
                         : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-700'
                     }`}
                   >
                     <div className="flex items-start">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 flex items-center justify-center mr-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-400/20 dark:bg-primary-700/30 text-primary-600 dark:text-white flex items-center justify-center mr-3">
                         {String.fromCharCode(65 + optIndex)}
                       </span>
-                      <span className="text-gray-700 dark:text-gray-300">{option}</span>
+                      <span className="text-primary-600 dark:text-white">{option}</span>
                     </div>
                   </div>
                 ))}
@@ -495,16 +495,16 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
             )}
             
             {showAnswers && question.answer && (
-              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
-                <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">Answer</h3>
-                <div className="text-blue-700 dark:text-blue-200">
+              <div className="mt-4 p-4 bg-primary-400/10 dark:bg-primary-700/20 rounded-lg border border-primary-400/30 dark:border-primary-700/50">
+                <h3 className="font-semibold text-primary-700 dark:text-white mb-2">Answer</h3>
+                <div className="text-primary-600 dark:text-white">
                   <ReactMarkdown>{question.answer}</ReactMarkdown>
                 </div>
                 
                 {question.explanation && (
-                  <div className="mt-2 pt-2 border-t border-blue-100 dark:border-blue-800">
-                    <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-1">Explanation</h3>
-                    <div className="text-blue-700 dark:text-blue-200">
+                  <div className="mt-2 pt-2 border-t border-primary-400/30 dark:border-primary-700/50">
+                    <h3 className="font-semibold text-primary-700 dark:text-white mb-1">Explanation</h3>
+                    <div className="text-primary-600 dark:text-white">
                       <ReactMarkdown>{question.explanation}</ReactMarkdown>
                     </div>
                   </div>

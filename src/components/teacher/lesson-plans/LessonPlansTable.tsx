@@ -32,10 +32,19 @@ export default function LessonPlansTable({ plans, onEdit, onDelete, onView }: Le
   return (
     <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-auto">
+          <colgroup>
+            <col className="w-[45%] sm:w-auto" />
+            <col className="hidden sm:table-cell" />
+            <col className="hidden md:table-cell" />
+            <col className="hidden md:table-cell" />
+            <col className="w-[25%] sm:w-auto" />
+            <col className="hidden lg:table-cell" />
+            <col className="w-[30%] sm:w-auto" />
+          </colgroup>
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th scope="col" className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Title
               </th>
               <th scope="col" className="hidden sm:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -53,7 +62,7 @@ export default function LessonPlansTable({ plans, onEdit, onDelete, onView }: Le
               <th scope="col" className="hidden lg:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Created
               </th>
-              <th scope="col" className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th scope="col" className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -61,11 +70,11 @@ export default function LessonPlansTable({ plans, onEdit, onDelete, onView }: Le
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {plans.map((plan) => (
               <tr key={plan.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                <td className="px-3 sm:px-6 py-3 sm:py-4">
+                <td className="px-3 sm:px-4 md:px-6 py-2 sm:py-4">
                   <div className="flex items-center">
                     <BookOpen className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-2 sm:mr-3 flex-shrink-0" />
                     <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 max-w-[150px] sm:max-w-[200px] md:max-w-none">
+                      <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white line-clamp-2 max-w-[120px] sm:max-w-[200px] md:max-w-none">
                         {plan.title}
                       </div>
                       <div className="sm:hidden text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -102,7 +111,7 @@ export default function LessonPlansTable({ plans, onEdit, onDelete, onView }: Le
                     {plan.duration}
                   </div>
                 </td>
-                <td className="px-3 sm:px-6 py-3 sm:py-4">
+                <td className="px-3 sm:px-4 md:px-6 py-2 sm:py-4">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                     plan.status === 'published'
                       ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400'
@@ -117,8 +126,8 @@ export default function LessonPlansTable({ plans, onEdit, onDelete, onView }: Le
                     {plan.createdAt}
                   </div>
                 </td>
-                <td className="px-3 sm:px-6 py-3 sm:py-4 text-right text-sm font-medium">
-                  <div className="flex items-center justify-end space-x-1 sm:space-x-2">
+                <td className="px-2 sm:px-6 py-2 sm:py-4 text-right text-xs sm:text-sm font-medium">
+                  <div className="flex items-center justify-end space-x-0.5 sm:space-x-2">
                     <button
                       onClick={() => onView(plan.id)}
                       className="p-1 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"

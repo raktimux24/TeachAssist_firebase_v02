@@ -33,6 +33,9 @@ import LessonPlanResults from './pages/teacher/content/LessonPlanResults';
 import ContentGeneration from './pages/teacher/content/ContentGeneration';
 import TeacherSettings from './pages/teacher/Settings';
 import LessonPlansList from './pages/teacher/LessonPlansList';
+import QuestionSetsList from './pages/teacher/QuestionSetsList';
+import ClassNotesList from './pages/teacher/ClassNotesList';
+import PresentationsList from './pages/teacher/PresentationsList';
 import MyResources from './pages/teacher/MyResources';
 import QuizResults from './pages/student/QuizResults';
 import AITutoring from './pages/student/AITutoring';
@@ -41,6 +44,8 @@ import StudyPlan from './pages/student/StudyPlan';
 import TeacherDashboard from './pages/teacher/Dashboard';
 import StudentDashboard from './pages/student/Dashboard';
 import StudentSettings from './pages/student/Settings';
+import LessonPlanView from './pages/teacher/content/lesson-plans/LessonPlanView';
+import LessonPlanEdit from './pages/teacher/content/lesson-plans/LessonPlanEdit';
 
 // Component to redirect users based on their role
 const RoleBasedRedirect = () => {
@@ -157,12 +162,18 @@ function App() {
           <Route element={<TeacherRoute />}>
             <Route path="/teacher" element={<TeacherDashboard isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/lessons" element={<LessonPlansList isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/notes" element={<ClassNotesList isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/presentations" element={<PresentationsList isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/question-sets" element={<QuestionSetsList isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/resources" element={<MyResources isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/resources/upload" element={<UploadResources isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/settings" element={<TeacherSettings isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content" element={<ContentGeneration isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content/notes" element={<GenerateNotes isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/notes/view/:id" element={<ClassNotesResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content/lesson-plans" element={<GenerateLessonPlans isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/lesson-plans/view/:id" element={<LessonPlanView isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/lesson-plans/edit/:id" element={<LessonPlanEdit isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content/presentations" element={<GeneratePresentations isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content/question-sets" element={<GenerateQuestionSets isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content/flashcards" element={<GenerateFlashcards isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
@@ -172,6 +183,7 @@ function App() {
             <Route path="/teacher/content/lesson-plans/results" element={<LessonPlanResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content/notes/results" element={<ClassNotesResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content/presentations/results" element={<PresentationsResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            <Route path="/teacher/content/presentations/results/:presentationId" element={<PresentationsResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
           </Route>
 
           {/* Student Routes - only accessible by student users */}

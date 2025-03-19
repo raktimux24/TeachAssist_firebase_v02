@@ -5,13 +5,19 @@ import {
   FileText,
   PenTool,
   GraduationCap,
-  X
+  X,
+  FileQuestion,
+  BookMarked,
+  Presentation
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/teacher', icon: LayoutDashboard },
   { name: 'Content Generation', href: '/teacher/content', icon: PenTool },
   { name: 'Lesson Plans', href: '/teacher/lessons', icon: BookOpen },
+  { name: 'Class Notes', href: '/teacher/notes', icon: BookMarked },
+  { name: 'Presentations', href: '/teacher/presentations', icon: Presentation },
+  { name: 'Question Sets', href: '/teacher/question-sets', icon: FileQuestion },
   { name: 'My Resources', href: '/teacher/resources', icon: FileText },
 ];
 
