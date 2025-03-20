@@ -2,15 +2,16 @@ import { fetchResources } from '../firebase/resources';
 import { Resource } from '../types/resource';
 
 /**
- * Fetches PDF resources based on class, subject, and chapters
+ * Fetches PDF resources based on class, subject, chapters, and book
  */
 export const fetchPdfResources = async (
   classId: string,
   subjectId: string,
-  chapters: string[]
+  chapters: string[],
+  bookId?: string
 ): Promise<Resource[]> => {
   try {
-    console.log('Fetching PDF resources for:', { classId, subjectId, chapters });
+    console.log('Fetching PDF resources for:', { classId, subjectId, chapters, bookId });
     
     // Create an array to store all resources
     const allResources: Resource[] = [];
@@ -20,7 +21,8 @@ export const fetchPdfResources = async (
       const resources = await fetchResources({
         class: classId,
         subject: subjectId,
-        chapter: chapter
+        chapter: chapter,
+        book: bookId
       });
       
       // Filter for PDF files only

@@ -461,7 +461,7 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
             className="flex items-center text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-500 mb-2"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
-            <span>Back to Generator</span>
+            <span>Back to Question Sets</span>
           </button>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             {questionSet.title || 'Generated Question Set'}

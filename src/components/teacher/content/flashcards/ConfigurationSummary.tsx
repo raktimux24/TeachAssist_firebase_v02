@@ -3,6 +3,7 @@ import { AlertCircle } from 'lucide-react';
 interface ConfigurationSummaryProps {
   selectedClass: string;
   selectedSubject: string;
+  selectedBook: string;
   selectedChapters: string[];
   flashcardType: string;
 }
@@ -10,6 +11,7 @@ interface ConfigurationSummaryProps {
 export default function ConfigurationSummary({
   selectedClass,
   selectedSubject,
+  selectedBook,
   selectedChapters,
   flashcardType,
 }: ConfigurationSummaryProps) {
@@ -26,6 +28,7 @@ export default function ConfigurationSummary({
               {selectedClass && selectedSubject ? (
                 <>
                   Generating {flashcardType.replace('-', ' ')} flashcards for {selectedClass} {selectedSubject}
+                  {selectedBook && ` from ${selectedBook}`}
                   {selectedChapters.length > 0 && ` covering ${selectedChapters.join(', ')}`}
                 </>
               ) : (

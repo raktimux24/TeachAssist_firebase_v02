@@ -51,7 +51,7 @@ export default function FlashcardsPreview() {
   }
 
   // If no flashcard set is available, show empty state
-  if (!flashcardSet) {
+  if (!flashcardSet || !flashcardSet.flashcards) {
     return (
       <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
         <div className="flex flex-col items-center justify-center py-12">
@@ -73,7 +73,7 @@ export default function FlashcardsPreview() {
   }
 
   const nextCard = () => {
-    setCurrentCard(prev => Math.min(prev + 1, flashcardSet.cards.length - 1));
+    setCurrentCard(prev => Math.min(prev + 1, flashcardSet.flashcards.length - 1));
     setIsFlipped(false);
   };
 
@@ -110,11 +110,11 @@ export default function FlashcardsPreview() {
           </div>
           <div className="flex items-center">
             <Layout className="w-4 h-4 mr-2" />
-            <span>{flashcardSet.type}</span>
+            <span>{(flashcardSet as any).generationOptions?.flashcardType || 'Standard'}</span>
           </div>
           <div className="flex items-center">
             <Layout className="w-4 h-4 mr-2" />
-            <span>{flashcardSet.cards.length} Cards</span>
+            <span>{flashcardSet.flashcards.length} Cards</span>
           </div>
         </div>
       </div>
@@ -133,7 +133,7 @@ export default function FlashcardsPreview() {
                 <div className={`absolute inset-0 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-8 backface-hidden ${isFlipped ? 'invisible' : ''}`}>
                   <div className="flex flex-col items-center justify-center h-full">
                     <h3 className="text-xl font-medium text-gray-900 dark:text-white text-center">
-                      {flashcardSet.cards[currentCard].front}
+                      {flashcardSet.flashcards[currentCard].front}
                     </h3>
                     <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
                       Click to flip
@@ -145,7 +145,7 @@ export default function FlashcardsPreview() {
                 <div className={`absolute inset-0 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-8 backface-hidden rotate-y-180 ${!isFlipped ? 'invisible' : ''}`}>
                   <div className="flex flex-col items-center justify-center h-full">
                     <p className="text-lg text-gray-700 dark:text-gray-300 text-center whitespace-pre-line">
-                      {flashcardSet.cards[currentCard].back}
+                      {flashcardSet.flashcards[currentCard].back}
                     </p>
                     <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
                       Click to flip back
@@ -166,11 +166,11 @@ export default function FlashcardsPreview() {
                 Previous
               </button>
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                Card {currentCard + 1} of {flashcardSet.cards.length}
+                Card {currentCard + 1} of {flashcardSet.flashcards.length}
               </span>
               <button
                 onClick={nextCard}
-                disabled={currentCard === flashcardSet.cards.length - 1}
+                disabled={currentCard === flashcardSet.flashcards.length - 1}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 disabled:opacity-50"
               >
                 Next
@@ -181,7 +181,7 @@ export default function FlashcardsPreview() {
         ) : (
           // Grid View
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {flashcardSet.cards.map((card, index) => (
+            {flashcardSet.flashcards.map((card, index) => (
               <button
                 key={card.id}
                 onClick={() => {
@@ -196,7 +196,7 @@ export default function FlashcardsPreview() {
                     Card {index + 1}
                   </h4>
                   <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                    {card.type}
+                    {(flashcardSet as any).generationOptions?.flashcardType || 'Standard'}
                   </span>
                 </div>
                 <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">

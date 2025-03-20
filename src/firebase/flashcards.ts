@@ -5,28 +5,56 @@ import { FlashcardSet } from '../services/openai';
 // Collection reference
 const flashcardsCollection = collection(db, 'flashcards');
 
+interface SaveFlashcardSetParams {
+  userId?: string;
+  generationOptions: Record<string, any>;
+  createdAt: Date;
+}
+
 /**
  * Save a generated flashcard set to Firestore
  */
-export const saveFlashcardSet = async (
-  flashcardSet: FlashcardSet,
-  userId: string,
-  generationOptions: Record<string, any>
-) => {
+export const saveFlashcardSet = async (params: FlashcardSet & SaveFlashcardSetParams) => {
   try {
-    // Add timestamp and user information
+    console.log('Saving flashcard set with params:', params);
+    
+    if (!params.userId) {
+      throw new Error('User ID is required to save flashcard set');
+    }
+
+    // Convert dates to Firestore timestamps
     const flashcardData = {
-      ...flashcardSet,
-      userId,
-      generationOptions,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      ...params,
+      createdAt: params.createdAt,
+      updatedAt: new Date(),
+      // Ensure all required fields are present
+      title: params.title || `${params.subject} Flashcards`,
+      class: params.class,
+      subject: params.subject,
+      book: params.book,
+      chapters: params.chapters,
+      flashcards: params.flashcards.map(card => ({
+        ...card,
+        id: card.id || `card-${Math.random().toString(36).substr(2, 9)}`
+      })),
+      generationOptions: {
+        ...params.generationOptions,
+        timestamp: new Date()
+      }
     };
     
+    console.log('Processed flashcard data:', flashcardData);
+    
     const docRef = await addDoc(flashcardsCollection, flashcardData);
+    console.log('Successfully saved flashcard set with ID:', docRef.id);
+    
     return { id: docRef.id, ...flashcardData };
   } catch (error) {
     console.error('Error saving flashcard set:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     throw error;
   }
 };

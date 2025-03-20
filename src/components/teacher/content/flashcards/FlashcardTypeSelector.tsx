@@ -1,70 +1,76 @@
-import React from 'react';
+import React, { Dispatch, SetStateAction } from 'react';
 import { Brain } from 'lucide-react';
 
 interface FlashcardType {
   id: string;
   label: string;
   description: string;
+  stemOnly?: boolean;
 }
 
 interface FlashcardTypeSelectorProps {
-  flashcardTypes: FlashcardType[];
   selectedType: string;
-  onTypeChange: (type: string) => void;
+  setSelectedType: Dispatch<SetStateAction<string>>;
+  isSTEMSubject: boolean;
 }
 
+const flashcardTypes: FlashcardType[] = [
+  {
+    id: 'definition',
+    label: 'Definition',
+    description: 'Term on front, definition on back'
+  },
+  {
+    id: 'concept',
+    label: 'Concept',
+    description: 'Concept name on front, explanation on back'
+  },
+  {
+    id: 'example',
+    label: 'Example',
+    description: 'Problem on front, solution on back'
+  },
+  {
+    id: 'formula',
+    label: 'Formula',
+    description: 'Formula name on front, formula and explanation on back',
+    stemOnly: true
+  }
+];
+
 export default function FlashcardTypeSelector({
-  flashcardTypes,
   selectedType,
-  onTypeChange,
+  setSelectedType,
+  isSTEMSubject
 }: FlashcardTypeSelectorProps) {
+  const filteredTypes = isSTEMSubject
+    ? flashcardTypes
+    : flashcardTypes.filter(type => !type.stemOnly);
+
   return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-        Select Flashcard Type
-      </label>
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-        {flashcardTypes.map((type) => (
-          <label
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+        Flashcard Type
+      </h3>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {filteredTypes.map((type) => (
+          <button
             key={type.id}
-            className={`
-              flex flex-col p-4 border rounded-lg cursor-pointer transition-colors
-              ${selectedType === type.id
-                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 dark:border-primary-400'
-                : 'border-gray-200 dark:border-gray-700 hover:border-primary-500'
-              }
-            `}
-          >
-            <input
-              type="radio"
-              name="flashcardType"
-              value={type.id}
-              checked={selectedType === type.id}
-              onChange={(e) => onTypeChange(e.target.value)}
-              className="sr-only"
-            />
-            <div className="flex items-center mb-2">
-              <Brain className={`h-5 w-5 mr-2 ${
-                selectedType === type.id
-                  ? 'text-primary-600 dark:text-primary-400'
-                  : 'text-gray-400'
-              }`} />
-              <span className={`font-medium ${
-                selectedType === type.id
-                  ? 'text-primary-700 dark:text-primary-300'
-                  : 'text-gray-700 dark:text-gray-300'
-              }`}>
-                {type.label}
-              </span>
-            </div>
-            <p className={`text-sm ${
+            type="button"
+            onClick={() => setSelectedType(type.id)}
+            className={`relative rounded-lg border p-4 flex flex-col hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
               selectedType === type.id
-                ? 'text-primary-600 dark:text-primary-300'
-                : 'text-gray-500 dark:text-gray-400'
-            }`}>
+                ? 'border-primary-500 ring-2 ring-primary-500'
+                : 'border-gray-300 dark:border-gray-600'
+            }`}
+          >
+            <span className="text-base font-medium text-gray-900 dark:text-white">
+              {type.label}
+            </span>
+            <span className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {type.description}
-            </p>
-          </label>
+            </span>
+          </button>
         ))}
       </div>
     </div>

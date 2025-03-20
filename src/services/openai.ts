@@ -5,30 +5,27 @@ export interface Flashcard {
   id: string;
   front: string;
   back: string;
-  type: 'definition' | 'concept' | 'formula' | 'question';
+  type: string;
+  tags?: string[];
 }
 
 export interface FlashcardSet {
   title: string;
-  subject: string;
   class: string;
-  type: string;
-  cards: Flashcard[];
+  subject: string;
+  book: string;
+  chapters: string[];
+  flashcards: Flashcard[];
 }
 
 export interface FlashcardGenerationOptions {
   class: string;
   subject: string;
+  book: string;
   chapters: string[];
   flashcardType: string;
-  includeDefinitions: boolean;
-  includeTheorems: boolean;
-  includeFormulas: boolean;
-  includeKeyPoints: boolean;
-  includeSummaries: boolean;
-  includeDiscussionQuestions: boolean;
-  additionalInstructions: string;
   resources: Resource[];
+  additionalInstructions: string;
 }
 
 // OpenAI API configuration - use environment variable
@@ -91,7 +88,7 @@ export const generateFlashcards = async (options: FlashcardGenerationOptions): P
     const flashcardSet = parseOpenAIResponse(content, options);
     
     // Log the successful generation
-    console.log(`Successfully generated ${flashcardSet.cards.length} flashcards for ${options.subject}`);
+    console.log(`Successfully generated ${flashcardSet.flashcards.length} flashcards for ${options.subject}`);
     
     return flashcardSet;
     
@@ -104,149 +101,86 @@ export const generateFlashcards = async (options: FlashcardGenerationOptions): P
 /**
  * Creates the system prompt for the OpenAI API
  */
-const createSystemPrompt = (options: FlashcardGenerationOptions): string => {
-  return `You are an expert educational content creator specialized in developing high-quality flashcards from academic material. Your task is to analyze PDF documents and transform them into effective flashcards based on user specifications.
+function createSystemPrompt(options: FlashcardGenerationOptions): string {
+  return `You are a helpful AI assistant that creates educational flashcards. Your task is to generate a set of flashcards based on the provided PDF content and user preferences.
 
-WORKFLOW:
-1. Analyze the provided PDF content thoroughly
-2. Identify key information appropriate for flashcard format
-3. Organize and structure flashcards according to the specified type
-4. Include additional requested elements (key points, summaries, discussion questions)
-5. Format the flashcards for optimal learning
+The flashcards should be:
+1. Clear and concise
+2. Focused on key concepts and learning objectives
+3. Appropriate for the specified class level and subject
+4. Following the specified flashcard type format
 
-INPUT VARIABLES:
-- Class: ${options.class}
-- Subject: ${options.subject}
-- Chapters: ${options.chapters.join(', ')}
-- Flashcard Type: ${options.flashcardType}
-- Include Key Points: ${options.includeKeyPoints ? 'Yes' : 'No'}
-- Include Summaries: ${options.includeSummaries ? 'Yes' : 'No'}
-- Include Discussion Questions: ${options.includeDiscussionQuestions ? 'Yes' : 'No'}
-- Include Definitions: ${options.includeDefinitions ? 'Yes' : 'No'}
-- Include Theorems & Formulas: ${options.includeTheorems || options.includeFormulas ? 'Yes' : 'No'}
-
-FLASHCARD TYPES:
-- Topic Wise: Organize flashcards by specific topics or themes within chapters
-- Concept Wise: Focus on key concepts, principles, and fundamental ideas
-- Important Questions: Create question-and-answer pairs for critical content
-- Definitions: Develop term-and-definition pairs for essential vocabulary
-- Theorems & Formulas: Present mathematical and scientific formulas with explanations
-
-FLASHCARD CREATION GUIDELINES:
-1. Front Side (Question/Prompt):
-   - Keep prompts clear, concise, and focused on a single point
-   - Use precise language appropriate for the educational level
-   - For definitions, include only the term
-   - For theorems/formulas, include the name or application
-   - For concept-based cards, pose a clear conceptual question
-
-2. Back Side (Answer/Explanation):
-   - Provide complete yet concise explanations
-   - Include relevant examples where helpful
-   - Use bullet points for complex answers when appropriate
-   - Include visual representations where beneficial (described for text-based output)
-   - Ensure accuracy and alignment with educational standards
-
-3. Additional Elements (When Requested):
-   - Key Points: Add essential facts related to the flashcard topic
-   - Summaries: Include brief overviews connecting the flashcard to broader topics
-   - Discussion Questions: Add thought-provoking questions that extend beyond recall
-
-ADDITIONAL CAPABILITIES:
-- Adapt language complexity based on the specified class level
-- Highlight key terms and concepts
-- Suggest helpful memory techniques where appropriate
-- Balance comprehensive coverage with focused learning
-- Ensure progressive difficulty within each category
-- Create connections between related flashcards
-- Incorporate appropriate visual descriptors
-
-${options.additionalInstructions ? `Additional instructions: ${options.additionalInstructions}` : ''}
-
-Format your response as a JSON object with the following structure:
+Please format your response as a JSON object with the following structure:
 {
-  "title": "Flashcard set title",
-  "subject": "${options.subject}",
-  "class": "${options.class}",
-  "type": "${options.flashcardType}",
-  "cards": [
+  "title": "Descriptive title for the flashcard set",
+  "class": "The class level",
+  "subject": "The subject",
+  "book": "The book name",
+  "chapters": ["Array of chapter names"],
+  "flashcards": [
     {
-      "id": "1",
-      "front": "Front text of the flashcard",
-      "back": "Back text of the flashcard",
-      "type": "definition | concept | formula | question"
-    },
-    ...more cards
+      "id": "unique-id",
+      "front": "Content for the front of the card",
+      "back": "Content for the back of the card",
+      "type": "The type of flashcard",
+      "tags": ["Optional array of relevant tags"]
+    }
   ]
+}`;
 }
-
-Generate at least 10 flashcards, but no more than 20. Ensure each flashcard is concise, clear, and educationally valuable. Always maintain academic accuracy while making the content accessible and engaging for the specified educational level. Focus on creating flashcards that facilitate effective learning through spaced repetition and active recall.`;
-};
 
 /**
  * Creates the user prompt for the OpenAI API
  */
-const createUserPrompt = (options: FlashcardGenerationOptions, pdfUrls: string[]): string => {
-  return `Please create flashcards for ${options.class} ${options.subject} covering the following chapters: ${options.chapters.join(', ')}.
-  
-The content is available in the following PDF files:
-${pdfUrls.map(url => `- ${url}`).join('\n')}
+function createUserPrompt(options: FlashcardGenerationOptions, pdfUrls: string[]): string {
+  return `Please create a set of flashcards with the following specifications:
 
-You need to parse these PDFs and extract the relevant information to create flashcards according to my requirements.
-Please make sure the flashcards are accurate, concise, and follow educational best practices.`;
-};
+Class: ${options.class}
+Subject: ${options.subject}
+Book: ${options.book}
+Chapters: ${options.chapters.join(', ')}
+Flashcard Type: ${options.flashcardType}
+
+Additional Instructions: ${options.additionalInstructions || 'None'}
+
+The content should be based on the following PDF resources:
+${pdfUrls.map((url, index) => `${index + 1}. ${url}`).join('\n')}
+
+Please ensure the flashcards are appropriate for the specified class level and follow the chosen flashcard type format.`;
+}
 
 /**
  * Parses the OpenAI API response into a FlashcardSet
  */
-const parseOpenAIResponse = (content: string, options: FlashcardGenerationOptions): FlashcardSet => {
+function parseOpenAIResponse(content: string, options: FlashcardGenerationOptions): FlashcardSet {
   try {
-    // Try to parse the JSON response
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const jsonContent = jsonMatch[0];
-        return JSON.parse(jsonContent) as FlashcardSet;
-      }
-    } catch (parseError) {
-      console.error('Error parsing OpenAI response:', parseError);
+    // Parse the JSON response
+    const parsedContent = JSON.parse(content);
+    
+    // Validate the required fields
+    if (!parsedContent.title || !Array.isArray(parsedContent.flashcards)) {
+      throw new Error('Invalid response format from OpenAI API');
     }
     
-    // Fallback to mock data if parsing fails
-    return {
-      title: `${options.subject} - ${options.chapters.join(', ')}`,
-      subject: options.subject,
+    // Create the FlashcardSet object
+    const flashcardSet: FlashcardSet = {
+      title: parsedContent.title,
       class: options.class,
-      type: options.flashcardType,
-      cards: [
-        {
-          id: '1',
-          front: 'What is a Chemical Bond?',
-          back: 'A chemical bond is the force of attraction that holds atoms together in a molecule or compound.',
-          type: 'definition'
-        },
-        {
-          id: '2',
-          front: 'Types of Chemical Bonds',
-          back: '1. Ionic Bond\n2. Covalent Bond\n3. Metallic Bond',
-          type: 'concept'
-        },
-        {
-          id: '3',
-          front: 'Bond Energy Formula',
-          back: 'Bond Energy = Energy required to break one mole of bonds in gaseous molecules',
-          type: 'formula'
-        },
-        {
-          id: '4',
-          front: 'Why do atoms form chemical bonds?',
-          back: 'Atoms form chemical bonds to achieve a more stable electron configuration, typically by reaching the electron configuration of the nearest noble gas.',
-          type: 'question'
-        }
-      ]
+      subject: options.subject,
+      book: options.book,
+      chapters: options.chapters,
+      flashcards: parsedContent.flashcards.map((card: any, index: number) => ({
+        id: card.id || `card-${index + 1}`,
+        front: card.front,
+        back: card.back,
+        type: card.type || options.flashcardType,
+        tags: card.tags || []
+      }))
     };
+    
+    return flashcardSet;
   } catch (error) {
     console.error('Error parsing OpenAI response:', error);
-    throw error;
+    throw new Error('Failed to parse the generated flashcards');
   }
-};
+}

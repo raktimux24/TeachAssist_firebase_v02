@@ -14,7 +14,7 @@ interface FlashcardEditProps {
 interface FlashcardItem extends Partial<Flashcard> {
   front: string;
   back: string;
-  type?: 'definition' | 'concept' | 'formula' | 'question';
+  type?: string;
 }
 
 export default function FlashcardEdit({ isDarkMode, onThemeToggle }: FlashcardEditProps) {
@@ -31,7 +31,7 @@ export default function FlashcardEdit({ isDarkMode, onThemeToggle }: FlashcardEd
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
   const [className, setClassName] = useState('');
-  const [cards, setCards] = useState<FlashcardItem[]>([]);
+  const [flashcards, setFlashcards] = useState<FlashcardItem[]>([]);
 
   useEffect(() => {
     async function loadFlashcardSet() {
@@ -58,11 +58,11 @@ export default function FlashcardEdit({ isDarkMode, onThemeToggle }: FlashcardEd
         setTitle(data.title || '');
         setSubject(data.subject || '');
         setClassName(data.class || '');
-        setCards(data.cards?.map((card: { id?: string; front: string; back: string; type?: string }) => ({ 
-          id: card.id || '',
+        setFlashcards(data.flashcards?.map((card: Flashcard) => ({ 
+          id: card.id,
           front: card.front,
           back: card.back,
-          type: (card.type || 'definition') as 'definition' | 'concept' | 'formula' | 'question'
+          type: card.type || data.generationOptions?.flashcardType || 'definition'
         })) || []);
         
         setLoading(false);
@@ -77,19 +77,24 @@ export default function FlashcardEdit({ isDarkMode, onThemeToggle }: FlashcardEd
   }, [id, userInfo?.uid]);
 
   const handleAddCard = () => {
-    setCards([...cards, { front: '', back: '' }]);
+    const newCard: FlashcardItem = {
+      front: '',
+      back: '',
+      type: flashcardData?.generationOptions?.flashcardType || 'definition'
+    };
+    setFlashcards([...flashcards, newCard]);
   };
 
   const handleRemoveCard = (index: number) => {
-    const newCards = [...cards];
-    newCards.splice(index, 1);
-    setCards(newCards);
+    const newFlashcards = [...flashcards];
+    newFlashcards.splice(index, 1);
+    setFlashcards(newFlashcards);
   };
 
   const handleCardChange = (index: number, field: 'front' | 'back', value: string) => {
-    const newCards = [...cards];
-    newCards[index][field] = value;
-    setCards(newCards);
+    const newFlashcards = [...flashcards];
+    newFlashcards[index][field] = value;
+    setFlashcards(newFlashcards);
   };
 
   const handleSave = async () => {
@@ -99,13 +104,13 @@ export default function FlashcardEdit({ isDarkMode, onThemeToggle }: FlashcardEd
       return;
     }
 
-    if (cards.length === 0) {
+    if (flashcards.length === 0) {
       alert('Please add at least one flashcard');
       return;
     }
 
     // Check for empty cards
-    const hasEmptyCards = cards.some(card => !card.front.trim() || !card.back.trim());
+    const hasEmptyCards = flashcards.some(card => !card.front.trim() || !card.back.trim());
     if (hasEmptyCards) {
       alert('Please fill in all flashcard fields or remove empty cards');
       return;
@@ -119,12 +124,12 @@ export default function FlashcardEdit({ isDarkMode, onThemeToggle }: FlashcardEd
         title,
         subject,
         class: className,
-        cards: cards.map(card => ({
+        flashcards: flashcards.map(card => ({
           id: card.id || `card-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           front: card.front,
           back: card.back,
-          type: card.type || 'definition'
-        }) as Flashcard)
+          type: card.type || flashcardData?.generationOptions?.flashcardType || 'definition'
+        }))
       };
       
       await updateFlashcardSet(id!, updateData);
@@ -140,11 +145,11 @@ export default function FlashcardEdit({ isDarkMode, onThemeToggle }: FlashcardEd
 
   return (
     <TeacherLayout isDarkMode={isDarkMode} onThemeToggle={onThemeToggle}>
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header with back button */}
-        <div className="flex items-center mb-6">
+        <div className="flex items-center mb-8">
           <button
-            onClick={() => navigate(`/teacher/content/flashcards/view/${id}`)}
+            onClick={() => navigate('/teacher/content/flashcards')}
             className="mr-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             aria-label="Go back"
           >
@@ -159,7 +164,7 @@ export default function FlashcardEdit({ isDarkMode, onThemeToggle }: FlashcardEd
 
         {/* Error state */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-8">
             <p className="text-red-600 dark:text-red-400">{error}</p>
             <button
               onClick={() => navigate('/teacher/flashcards')}
@@ -180,13 +185,13 @@ export default function FlashcardEdit({ isDarkMode, onThemeToggle }: FlashcardEd
 
         {/* Edit form */}
         {!loading && !error && (
-          <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-              <div className="space-y-4">
+          <div className="space-y-8">
+            <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-8">
+              <div className="space-y-8">
                 {/* Metadata fields */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="col-span-1 md:col-span-3">
-                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Title
                     </label>
                     <input
@@ -194,12 +199,12 @@ export default function FlashcardEdit({ isDarkMode, onThemeToggle }: FlashcardEd
                       id="title"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="Flashcard Set Title"
+                      className="block w-full h-12 px-4 rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-base"
+                      placeholder="Enter a title for your flashcard set"
                     />
                   </div>
                   <div>
-                    <label htmlFor="subject" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label htmlFor="subject" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Subject
                     </label>
                     <input
@@ -207,12 +212,12 @@ export default function FlashcardEdit({ isDarkMode, onThemeToggle }: FlashcardEd
                       id="subject"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="Subject"
+                      className="block w-full h-12 px-4 rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-base"
+                      placeholder="Enter subject"
                     />
                   </div>
                   <div>
-                    <label htmlFor="class" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label htmlFor="class" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Class
                     </label>
                     <input
@@ -220,73 +225,73 @@ export default function FlashcardEdit({ isDarkMode, onThemeToggle }: FlashcardEd
                       id="class"
                       value={className}
                       onChange={(e) => setClassName(e.target.value)}
-                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                      placeholder="Class"
+                      className="block w-full h-12 px-4 rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-base"
+                      placeholder="Enter class"
                     />
                   </div>
                 </div>
 
                 {/* Cards section */}
-                <div className="mt-6">
-                  <div className="flex items-center justify-between mb-4">
+                <div className="mt-8">
+                  <div className="flex items-center justify-between mb-6">
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                      Flashcards ({cards.length})
+                      Flashcards ({flashcards.length})
                     </h3>
                     <button
                       type="button"
                       onClick={handleAddCard}
-                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                     >
-                      <Plus className="h-4 w-4 mr-1" />
+                      <Plus className="h-5 w-5 mr-2" />
                       Add Card
                     </button>
                   </div>
 
                   {/* Card list */}
-                  <div className="space-y-4">
-                    {cards.map((card, index) => (
-                      <div key={index} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg relative">
+                  <div className="space-y-6">
+                    {flashcards.map((card, index) => (
+                      <div key={index} className="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-lg relative shadow-sm">
                         <button
                           type="button"
                           onClick={() => handleRemoveCard(index)}
-                          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                          className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                           aria-label="Remove card"
                         >
                           <X className="h-5 w-5" />
                         </button>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
-                            <label htmlFor={`card-front-${index}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label htmlFor={`card-front-${index}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                               Front
                             </label>
                             <textarea
                               id={`card-front-${index}`}
                               value={card.front}
                               onChange={(e) => handleCardChange(index, 'front', e.target.value)}
-                              rows={3}
-                              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-600 dark:text-white"
-                              placeholder="Front side content"
+                              rows={4}
+                              className="block w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-base resize-none"
+                              placeholder="Enter the content for the front of the card"
                             />
                           </div>
                           <div>
-                            <label htmlFor={`card-back-${index}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label htmlFor={`card-back-${index}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                               Back
                             </label>
                             <textarea
                               id={`card-back-${index}`}
                               value={card.back}
                               onChange={(e) => handleCardChange(index, 'back', e.target.value)}
-                              rows={3}
-                              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-600 dark:text-white"
-                              placeholder="Back side content"
+                              rows={4}
+                              className="block w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white text-base resize-none"
+                              placeholder="Enter the content for the back of the card"
                             />
                           </div>
                         </div>
                       </div>
                     ))}
 
-                    {cards.length === 0 && (
-                      <div className="text-center py-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    {flashcards.length === 0 && (
+                      <div className="text-center py-12 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <p className="text-gray-500 dark:text-gray-400">No cards yet. Click "Add Card" to create your first flashcard.</p>
                       </div>
                     )}
@@ -295,11 +300,11 @@ export default function FlashcardEdit({ isDarkMode, onThemeToggle }: FlashcardEd
               </div>
 
               {/* Action buttons */}
-              <div className="mt-6 flex justify-end">
+              <div className="mt-8 flex justify-end space-x-4">
                 <button
                   type="button"
-                  onClick={() => navigate(`/teacher/content/flashcards/view/${id}`)}
-                  className="mr-3 inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  onClick={() => navigate('/teacher/content/flashcards')}
+                  className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                 >
                   Cancel
                 </button>
@@ -307,7 +312,7 @@ export default function FlashcardEdit({ isDarkMode, onThemeToggle }: FlashcardEd
                   type="button"
                   onClick={handleSave}
                   disabled={saving}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {saving ? (
                     <>
