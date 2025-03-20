@@ -16,23 +16,34 @@ export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceL
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedSubject, setSelectedSubject] = useState('all');
+  const [selectedBook, setSelectedBook] = useState('all');
   const [selectedChapter, setSelectedChapter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const { currentUser, userInfo } = useAuth();
 
-  // Handler for class selection that resets subject and chapter if class changes
+  // Handler for class selection that resets subject, book, and chapter if class changes
   const handleClassChange = (classValue: string) => {
     setSelectedClass(classValue);
     if (classValue !== selectedClass) {
       setSelectedSubject('all');
+      setSelectedBook('all');
       setSelectedChapter('all');
     }
   };
 
-  // Handler for subject selection that resets chapter if subject changes
+  // Handler for subject selection that resets book and chapter if subject changes
   const handleSubjectChange = (subject: string) => {
     setSelectedSubject(subject);
     if (subject !== selectedSubject) {
+      setSelectedBook('all');
+      setSelectedChapter('all');
+    }
+  };
+
+  // Handler for book selection that resets chapter if book changes
+  const handleBookChange = (book: string) => {
+    setSelectedBook(book);
+    if (book !== selectedBook) {
       setSelectedChapter('all');
     }
   };
@@ -67,6 +78,8 @@ export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceL
               onClassChange={handleClassChange}
               selectedSubject={selectedSubject}
               onSubjectChange={handleSubjectChange}
+              selectedBook={selectedBook}
+              onBookChange={handleBookChange}
               selectedChapter={selectedChapter}
               onChapterChange={setSelectedChapter}
             />
@@ -101,8 +114,13 @@ export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceL
             </div>
           </div>
 
-          <div style={{ display: 'none' }}>
-            {console.log('ResourceLibrary: Rendering with viewMode:', viewMode, 'showOnlyUserResources: false')}
+          {/* Log rendering information */}
+          <div className="hidden">
+            {/* Using a hidden div to contain the console.log statement */}
+            {(() => {
+              console.log('ResourceLibrary: Rendering with viewMode:', viewMode, 'showOnlyUserResources: false');
+              return null;
+            })()}
           </div>
           
           {viewMode === 'grid' ? (
@@ -110,6 +128,7 @@ export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceL
               searchQuery={searchQuery}
               selectedClass={selectedClass}
               selectedSubject={selectedSubject}
+              selectedBook={selectedBook}
               selectedType={selectedChapter}
               showOnlyUserResources={false}
               onResourceDeleted={handleResourceDeleted} 
@@ -119,7 +138,8 @@ export default function ResourceLibrary({ isDarkMode, onThemeToggle }: ResourceL
               searchQuery={searchQuery}
               selectedClass={selectedClass}
               selectedSubject={selectedSubject}
-              selectedType={selectedChapter}
+              selectedBook={selectedBook}
+              selectedChapter={selectedChapter}
               showOnlyUserResources={false}
               onResourceDeleted={handleResourceDeleted}
             />

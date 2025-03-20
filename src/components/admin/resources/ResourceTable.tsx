@@ -15,6 +15,7 @@ interface ResourceTableProps {
   searchQuery?: string;
   selectedClass?: string;
   selectedSubject?: string;
+  selectedBook?: string;
   selectedChapter?: string;
   showOnlyUserResources?: boolean;
   onResourceDeleted?: () => void;
@@ -25,6 +26,7 @@ export default function ResourceTable({
   searchQuery = '', 
   selectedClass = 'all', 
   selectedSubject = 'all', 
+  selectedBook = 'all',
   selectedChapter = 'all',
   showOnlyUserResources = false,
   onResourceDeleted 
@@ -60,6 +62,7 @@ export default function ResourceTable({
           class: selectedClass,
           formattedClass,
           subject: selectedSubject,
+          book: selectedBook,
           chapter: selectedChapter,
           showOnlyUserResources
         });
@@ -68,6 +71,7 @@ export default function ResourceTable({
           searchQuery,
           class: formattedClass,
           subject: selectedSubject,
+          book: selectedBook,
           chapter: selectedChapter
         });
         
@@ -107,7 +111,7 @@ export default function ResourceTable({
     };
 
     loadResources();
-  }, [initialResources, searchQuery, selectedClass, selectedSubject, selectedChapter, showOnlyUserResources, currentUser]);
+  }, [initialResources, searchQuery, selectedClass, selectedSubject, selectedBook, selectedChapter, showOnlyUserResources, currentUser]);
 
   const handleDownload = async (resource: Resource) => {
     if (!resource.id || !resource.fileUrl) return;
@@ -178,6 +182,7 @@ export default function ResourceTable({
             searchQuery,
             class: formattedClass,
             subject: selectedSubject,
+            book: selectedBook,
             chapter: selectedChapter
           });
           

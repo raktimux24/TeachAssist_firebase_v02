@@ -11,7 +11,8 @@ interface ResourceGridProps {
   searchQuery?: string;
   selectedClass?: string;
   selectedSubject?: string;
-  selectedChapter?: string;
+  selectedBook?: string;
+  selectedType?: string;
   showOnlyUserResources?: boolean;
   onResourceDeleted?: () => void;
 }
@@ -20,7 +21,8 @@ export default function ResourceGrid({
   searchQuery = '', 
   selectedClass = 'all', 
   selectedSubject = 'all', 
-  selectedChapter = 'all',
+  selectedBook = 'all',
+  selectedType = 'all',
   showOnlyUserResources = false,
   onResourceDeleted 
 }: ResourceGridProps) {
@@ -47,7 +49,8 @@ export default function ResourceGrid({
           class: selectedClass,
           formattedClass,
           subject: selectedSubject,
-          chapter: selectedChapter,
+          book: selectedBook,
+          chapter: selectedType,
           showOnlyUserResources
         });
         
@@ -55,7 +58,8 @@ export default function ResourceGrid({
           searchQuery,
           class: formattedClass,
           subject: selectedSubject,
-          chapter: selectedChapter
+          book: selectedBook,
+          chapter: selectedType
         });
         
         console.log('ResourceGrid: Fetched resources count:', fetchedResources.length);
@@ -94,7 +98,7 @@ export default function ResourceGrid({
     };
 
     loadResources();
-  }, [searchQuery, selectedClass, selectedSubject, selectedChapter, showOnlyUserResources, currentUser]);
+  }, [searchQuery, selectedClass, selectedSubject, selectedBook, selectedType, showOnlyUserResources, currentUser]);
 
   const handleDownload = async (resource: Resource) => {
     if (!resource.id || !resource.fileUrl) return;
@@ -165,7 +169,8 @@ export default function ResourceGrid({
           searchQuery,
           class: formattedClass,
           subject: selectedSubject,
-          chapter: selectedChapter
+          book: selectedBook,
+          chapter: selectedType
         });
         
         let filteredResources = fetchedResources;
