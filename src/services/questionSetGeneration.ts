@@ -189,41 +189,53 @@ export const saveQuestionSetToFirestore = async (
     let retries = 3;
     let docRef: DocumentReference | null = null;
     
+    // Try different collection names if needed (for backward compatibility)
+    const collectionNames = ['questionsets', 'questionSet', 'questionset'];
+    
     while (retries > 0) {
-      try {
-        docRef = await addDoc(collection(db, 'questionsets'), firestoreQuestionSet);
-        console.log('Question set saved to Firestore with ID:', docRef.id);
-        return docRef;
-      } catch (error) {
-        console.warn(`Error saving question set to Firestore (attempt ${4 - retries}/3):`, error);
-        retries--;
+      // Try each collection name
+      for (const collName of collectionNames) {
+        try {
+          // Make sure the data is serializable
+          const sanitizedData = JSON.parse(JSON.stringify(firestoreQuestionSet));
+          
+          docRef = await addDoc(collection(db, collName), sanitizedData);
+          console.log(`Question set saved to Firestore collection '${collName}' with ID:`, docRef.id);
+          return docRef;
+        } catch (collError) {
+          console.warn(`Error saving to collection '${collName}':`, collError);
+          // Continue to the next collection
+        }
+      }
+      
+      // If we get here, all collection attempts failed
+      retries--;
+      
+      if (retries === 0) {
+        // If all retries fail, log the error but don't throw
+        console.error('Failed to save question set to Firestore after multiple attempts');
         
-        if (retries === 0) {
-          // If all retries fail, log the error but don't throw
-          console.error('Failed to save question set to Firestore after multiple attempts');
-          
-          // Save to localStorage as a fallback
-          try {
-            const localStorageKey = `questionset_${new Date().getTime()}`;
-            localStorage.setItem(localStorageKey, JSON.stringify({
-              ...firestoreQuestionSet,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              _localStorageKey: localStorageKey,
-              _failedFirestoreSave: true
-            }));
-            console.log('Saved question set to localStorage as fallback with key:', localStorageKey);
-          } catch (localStorageError) {
-            console.error('Error saving to localStorage:', localStorageError);
-          }
-          
-          return null;
+        // Save to localStorage as a fallback
+        try {
+          const localStorageKey = `questionset_${new Date().getTime()}`;
+          localStorage.setItem(localStorageKey, JSON.stringify({
+            ...firestoreQuestionSet,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            _localStorageKey: localStorageKey,
+            _failedFirestoreSave: true
+          }));
+          console.log('Saved question set to localStorage as fallback with key:', localStorageKey);
+        } catch (localStorageError) {
+          console.error('Error saving to localStorage:', localStorageError);
         }
         
-        // Wait before retrying (exponential backoff)
-        const delay = 1000 * Math.pow(2, 3 - retries);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        return null;
       }
+      
+      // Wait before retrying (exponential backoff)
+      const delay = 1000 * Math.pow(2, 3 - retries);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
     
     return docRef; // This should never be reached due to the return in the try block or the return null in the catch block
@@ -242,20 +254,25 @@ export const getUserQuestionSets = async (userId: string): Promise<QuestionSet[]
       throw new Error('User ID is required to fetch question sets');
     }
     
-    // Create a query to get all question sets for this user
-    const q = query(
-      collection(db, 'questionsets'),
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
-    );
-    
-    // Execute the query
-    const querySnapshot = await getDocs(q);
-    
-    // Convert the query results to QuestionSet objects
+    // Try different collection names for backward compatibility
+    const collectionNames = ['questionsets', 'questionSet', 'questionset'];
     const questionSets: QuestionSet[] = [];
     
-    querySnapshot.forEach((doc) => {
+    // Try each collection
+    for (const collName of collectionNames) {
+      try {
+        // Create a query to get all question sets for this user
+        const q = query(
+          collection(db, collName),
+          where('userId', '==', userId),
+          orderBy('createdAt', 'desc')
+        );
+        
+        // Execute the query
+        const querySnapshot = await getDocs(q);
+        
+        // Add results from this collection
+        querySnapshot.forEach((doc) => {
       const data = doc.data();
       
       // Convert Firestore timestamps to Date objects
@@ -276,8 +293,15 @@ export const getUserQuestionSets = async (userId: string): Promise<QuestionSet[]
         firebaseId: doc.id
       };
       
-      questionSets.push(questionSet);
-    });
+          questionSets.push(questionSet);
+        });
+        
+        console.log(`Found ${querySnapshot.size} question sets in collection '${collName}'`);
+      } catch (collError) {
+        console.warn(`Error querying collection '${collName}':`, collError);
+        // Continue to the next collection
+      }
+    }
     
     return questionSets;
   } catch (error) {
@@ -485,9 +509,26 @@ export const deleteQuestionSet = async (id: string): Promise<void> => {
       throw new Error('Question set ID is required for deletion');
     }
 
-    const docRef = doc(db, 'questionsets', id);
-    await deleteDoc(docRef);
-    console.log('Question set deleted successfully:', id);
+    // Try different collection names for backward compatibility
+    const collectionNames = ['questionsets', 'questionSet', 'questionset'];
+    let deleted = false;
+
+    for (const collName of collectionNames) {
+      try {
+        const docRef = doc(db, collName, id);
+        await deleteDoc(docRef);
+        console.log(`Question set deleted successfully from collection '${collName}':`, id);
+        deleted = true;
+        break; // Exit loop if deletion succeeds
+      } catch (collError) {
+        console.warn(`Failed to delete from collection '${collName}':`, collError);
+        // Continue to the next collection
+      }
+    }
+
+    if (!deleted) {
+      throw new Error(`Could not delete question set with ID ${id} from any collection`);
+    }
   } catch (error) {
     console.error('Error deleting question set:', error);
     throw error;

@@ -28,6 +28,20 @@ table {
   width: 100%;
 }
 
+/* Responsive table styles */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Table cell content handling */
+td > div.truncate {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
 /* Ensure text doesn't overflow containers */
 .truncate-text {
   white-space: nowrap;

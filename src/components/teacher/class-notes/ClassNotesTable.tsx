@@ -75,11 +75,11 @@ export default function ClassNotesTable({ notes, onDelete, onView }: ClassNotesT
       
       {/* Desktop Table View */}
       <div className="hidden md:block overflow-x-auto -mx-2 sm:-mx-0">
-        <div className="w-full">
-          <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+        <div className="w-full table-responsive">
+          <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700 table-fixed">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white sm:pl-6">
+              <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white sm:pl-6 w-[30%]">
                 Title
               </th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
@@ -105,8 +105,8 @@ export default function ClassNotesTable({ notes, onDelete, onView }: ClassNotesT
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
             {notes.map((note) => (
               <tr key={note.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-6">
-                  {note.title}
+                <td className="py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-6 max-w-[250px]">
+                  <div className="truncate">{note.title}</div>
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {note.subject}
