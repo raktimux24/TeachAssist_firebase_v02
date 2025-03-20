@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import BasicSettings from './lesson-plans/BasicSettings';
 import LessonPlanOptions from './lesson-plans/LessonPlanOptions';
 import ConfigurationSummary from './lesson-plans/ConfigurationSummary';
-import { fetchClasses, fetchSubjects, fetchChapters, fetchResourcesByChapters } from '../../../firebase/resources';
+import { fetchClasses, fetchSubjects, fetchBooks, fetchChapters, fetchResourcesByChapters } from '../../../firebase/resources';
 import { generateLessonPlan } from '../../../services/lessonPlanGeneration';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -24,6 +24,7 @@ export default function LessonPlanGenerator({ isDarkMode }: LessonPlanGeneratorP
   const { currentUser } = useAuth();
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedBook, setSelectedBook] = useState('');
   const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
   const [format, setFormat] = useState<'general' | 'subject-specific'>('general');
   const [numberOfClasses, setNumberOfClasses] = useState(1);
@@ -34,10 +35,12 @@ export default function LessonPlanGenerator({ isDarkMode }: LessonPlanGeneratorP
   // State for storing data from Firebase
   const [classes, setClasses] = useState<string[]>([]);
   const [subjects, setSubjects] = useState<Record<string, string[]>>({});
+  const [books, setBooks] = useState<Record<string, string[]>>({});
   const [chapters, setChapters] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState({
     classes: false,
     subjects: false,
+    books: false,
     chapters: false
   });
 
@@ -49,6 +52,7 @@ export default function LessonPlanGenerator({ isDarkMode }: LessonPlanGeneratorP
         const options = JSON.parse(savedOptions);
         setSelectedClass(options.class || '');
         setSelectedSubject(options.subject || '');
+        setSelectedBook(options.book || '');
         setSelectedChapters(options.chapters || []);
         setFormat(options.format || 'general');
         setNumberOfClasses(options.numberOfClasses || 1);
@@ -106,17 +110,40 @@ export default function LessonPlanGenerator({ isDarkMode }: LessonPlanGeneratorP
     getSubjects();
   }, [selectedClass]);
 
-  // Fetch chapters when a subject is selected
+  // Fetch books when a subject is selected
   useEffect(() => {
     if (!selectedClass || !selectedSubject) return;
+
+    const getBooks = async () => {
+      setLoading(prev => ({ ...prev, books: true }));
+      try {
+        const fetchedBooks = await fetchBooks(selectedClass, selectedSubject);
+        setBooks(prev => ({
+          ...prev,
+          [`${selectedClass}-${selectedSubject}`]: fetchedBooks
+        }));
+      } catch (error) {
+        console.error('Error fetching books:', error);
+        toast.error('Failed to load books. Please try again.');
+      } finally {
+        setLoading(prev => ({ ...prev, books: false }));
+      }
+    };
+
+    getBooks();
+  }, [selectedClass, selectedSubject]);
+
+  // Fetch chapters when a book is selected
+  useEffect(() => {
+    if (!selectedClass || !selectedSubject || !selectedBook) return;
 
     const getChapters = async () => {
       setLoading(prev => ({ ...prev, chapters: true }));
       try {
-        const fetchedChapters = await fetchChapters(selectedClass, selectedSubject);
+        const fetchedChapters = await fetchChapters(selectedClass, selectedSubject, selectedBook);
         setChapters(prev => ({
           ...prev,
-          [selectedSubject]: fetchedChapters
+          [`${selectedClass}-${selectedSubject}-${selectedBook}`]: fetchedChapters
         }));
       } catch (error) {
         console.error('Error fetching chapters:', error);
@@ -127,11 +154,11 @@ export default function LessonPlanGenerator({ isDarkMode }: LessonPlanGeneratorP
     };
 
     getChapters();
-  }, [selectedClass, selectedSubject]);
+  }, [selectedClass, selectedSubject, selectedBook]);
 
   const handleGenerate = async () => {
-    if (!selectedClass || !selectedSubject || selectedChapters.length === 0) {
-      toast.error('Please select a class, subject, and at least one chapter');
+    if (!selectedClass || !selectedSubject || !selectedBook || selectedChapters.length === 0) {
+      toast.error('Please select a class, subject, book, and at least one chapter');
       return;
     }
 
@@ -153,6 +180,7 @@ export default function LessonPlanGenerator({ isDarkMode }: LessonPlanGeneratorP
         title: `${selectedSubject} Lesson Plan: ${selectedChapters.join(', ')}`,
         class: selectedClass,
         subject: selectedSubject,
+        book: selectedBook,
         chapters: selectedChapters,
         format,
         numberOfClasses,
@@ -194,12 +222,16 @@ export default function LessonPlanGenerator({ isDarkMode }: LessonPlanGeneratorP
             setSelectedClass={setSelectedClass}
             selectedSubject={selectedSubject}
             setSelectedSubject={setSelectedSubject}
+            selectedBook={selectedBook}
+            setSelectedBook={setSelectedBook}
             selectedChapters={selectedChapters}
             setSelectedChapters={setSelectedChapters}
             classes={classes}
             subjects={subjects}
+            books={books}
             chapters={chapters}
             loading={loading}
+            isDarkMode={isDarkMode}
           />
 
           <LessonPlanOptions

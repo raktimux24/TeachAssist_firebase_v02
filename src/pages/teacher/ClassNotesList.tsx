@@ -5,9 +5,10 @@ import ClassNotesFilters from '../../components/teacher/class-notes/ClassNotesFi
 import ClassNotesTable from '../../components/teacher/class-notes/ClassNotesTable';
 import ClassNotesGrid from '../../components/teacher/class-notes/ClassNotesGrid';
 import ClassNotesActionPanel from '../../components/teacher/class-notes/ClassNotesActionPanel';
-import { getUserNotes, NotesSet } from '../../services/notesGeneration';
+import { getUserNotes, NotesSet, deleteNotes } from '../../services/notesGeneration';
 import { useAuth } from '../../contexts/AuthContext';
 import { LayoutGrid, List, Plus } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 interface ClassNotesListProps {
   isDarkMode: boolean;
@@ -18,7 +19,8 @@ export default function ClassNotesList({ isDarkMode, onThemeToggle }: ClassNotes
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedClass, setSelectedClass] = useState('all');
-  const [selectedType, setSelectedType] = useState('all');
+  const [selectedBook, setSelectedBook] = useState('all');
+  const [selectedChapter, setSelectedChapter] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [classNotes, setClassNotes] = useState<NotesSet[]>([]);
@@ -70,11 +72,15 @@ export default function ClassNotesList({ isDarkMode, onThemeToggle }: ClassNotes
       const matchesClass = selectedClass === 'all' || 
         (note.class && note.class.toLowerCase() === selectedClass.toLowerCase());
       
-      // Filter by note type
-      const matchesType = selectedType === 'all' || 
-        (note.type && note.type.toLowerCase() === selectedType.toLowerCase());
+      // Filter by book
+      const matchesBook = selectedBook === 'all' || 
+        (note.book && note.book === selectedBook);
       
-      return matchesSearch && matchesSubject && matchesClass && matchesType;
+      // Filter by chapter
+      const matchesChapter = selectedChapter === 'all' || 
+        (note.chapters && note.chapters.includes(selectedChapter));
+      
+      return matchesSearch && matchesSubject && matchesClass && matchesBook && matchesChapter;
     })
     .sort((a, b) => {
       // Sort by selected sort option
@@ -92,24 +98,58 @@ export default function ClassNotesList({ isDarkMode, onThemeToggle }: ClassNotes
     });
 
   // Convert class notes to the format expected by the components
-  const formattedNotes = filteredAndSortedNotes.map(note => ({
-    id: note.firebaseId || '',
-    title: note.title || 'Untitled Class Notes',
-    subject: note.subject || 'No Subject',
-    class: note.class || 'No Class',
-    type: note.type || 'standard',
-    layout: note.layout || 'one-column',
-    notesCount: note.notes?.length || 0,
-    createdAt: note.createdAt instanceof Date ? note.createdAt.toLocaleDateString() : 'Unknown Date',
-    tags: Array.isArray(note.chapters) ? note.chapters : []
-  }));
+  const formattedNotes = filteredAndSortedNotes.map(note => {
+    // Extract book name from the first chapter if book is not available
+    // This is for backward compatibility with notes that don't have the book property
+    let bookName = note.book || '';
+    
+    // If no book name is available and there are chapters, try to extract book name from the first chapter
+    if (!bookName && Array.isArray(note.chapters) && note.chapters.length > 0) {
+      // Chapters might be in format "Book Name - Chapter Name"
+      const firstChapter = note.chapters[0];
+      const dashIndex = firstChapter.indexOf(' - ');
+      if (dashIndex > 0) {
+        bookName = firstChapter.substring(0, dashIndex);
+      }
+    }
+    
+    return {
+      id: note.firebaseId || '',
+      title: note.title || 'Untitled Class Notes',
+      subject: note.subject || 'No Subject',
+      class: note.class || 'No Class',
+      book: bookName || 'No Book',
+      type: note.type || 'standard',
+      layout: note.layout || 'one-column',
+      notesCount: note.notes?.length || 0,
+      createdAt: note.createdAt instanceof Date ? note.createdAt.toLocaleDateString() : 'Unknown Date',
+      tags: Array.isArray(note.chapters) ? note.chapters : []
+    };
+  });
 
   // Handle delete and view actions
-  const handleDelete = (id: string) => {
-    // TODO: Implement delete functionality
-    console.log('Delete class notes:', id);
-    // After confirmation, remove the notes from state
-    setClassNotes(prev => prev.filter(note => note.firebaseId !== id));
+  const handleDelete = async (id: string) => {
+    // Show confirmation dialog
+    if (window.confirm('Are you sure you want to delete these notes? This action cannot be undone.')) {
+      try {
+        // Show loading toast
+        toast.loading('Deleting notes...', { id: 'deleting-notes' });
+        
+        // Call the deleteNotes function to delete from Firestore
+        const success = await deleteNotes(id);
+        
+        if (success) {
+          // If deletion was successful, update the UI
+          setClassNotes(prev => prev.filter(note => note.firebaseId !== id));
+          toast.success('Notes deleted successfully!', { id: 'deleting-notes' });
+        } else {
+          toast.error('Failed to delete notes. Please try again.', { id: 'deleting-notes' });
+        }
+      } catch (error) {
+        console.error('Error deleting notes:', error);
+        toast.error('An error occurred while deleting notes.', { id: 'deleting-notes' });
+      }
+    }
   };
 
   const handleView = (id: string) => {
@@ -167,8 +207,10 @@ export default function ClassNotesList({ isDarkMode, onThemeToggle }: ClassNotes
             onSubjectChange={setSelectedSubject}
             selectedClass={selectedClass}
             onClassChange={setSelectedClass}
-            selectedType={selectedType}
-            onTypeChange={setSelectedType}
+            selectedBook={selectedBook}
+            onBookChange={setSelectedBook}
+            selectedChapter={selectedChapter}
+            onChapterChange={setSelectedChapter}
             sortBy={sortBy}
             onSortChange={setSortBy}
           />

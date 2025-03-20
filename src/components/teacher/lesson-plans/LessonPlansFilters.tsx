@@ -1,4 +1,6 @@
 import { Search } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { fetchClasses, fetchSubjects, fetchBooks, fetchChapters } from '../../../firebase/resources';
 
 interface LessonPlansFiltersProps {
   searchQuery: string;
@@ -7,15 +9,14 @@ interface LessonPlansFiltersProps {
   onSubjectChange: (subject: string) => void;
   selectedClass: string;
   onClassChange: (classLevel: string) => void;
-  selectedStatus: string;
-  onStatusChange: (status: string) => void;
+  selectedBook: string;
+  onBookChange: (book: string) => void;
+  selectedChapter: string;
+  onChapterChange: (chapter: string) => void;
   sortBy: string;
   onSortChange: (sort: string) => void;
 }
 
-const subjects = ['all', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', 'History'];
-const classes = ['all', 'Class 10', 'Class 11', 'Class 12'];
-const statuses = ['all', 'draft', 'published'];
 const sortOptions = [
   { value: 'date', label: 'Date Created' },
   { value: 'title', label: 'Title' },
@@ -29,11 +30,106 @@ export default function LessonPlansFilters({
   onSubjectChange,
   selectedClass,
   onClassChange,
-  selectedStatus,
-  onStatusChange,
+  selectedBook,
+  onBookChange,
+  selectedChapter,
+  onChapterChange,
   sortBy,
   onSortChange,
 }: LessonPlansFiltersProps) {
+  const [classes, setClasses] = useState<string[]>(['all']);
+  const [subjects, setSubjects] = useState<string[]>(['all']);
+  const [books, setBooks] = useState<string[]>(['all']);
+  const [chapters, setChapters] = useState<string[]>(['all']);
+  const [loading, setLoading] = useState({
+    classes: false,
+    subjects: false,
+    books: false,
+    chapters: false
+  });
+
+  // Fetch classes on component mount
+  useEffect(() => {
+    const getClasses = async () => {
+      setLoading(prev => ({ ...prev, classes: true }));
+      try {
+        const fetchedClasses = await fetchClasses();
+        setClasses(['all', ...fetchedClasses]);
+      } catch (error) {
+        console.error('Error fetching classes:', error);
+      } finally {
+        setLoading(prev => ({ ...prev, classes: false }));
+      }
+    };
+
+    getClasses();
+  }, []);
+
+  // Fetch subjects when a class is selected
+  useEffect(() => {
+    if (selectedClass === 'all') {
+      setSubjects(['all']);
+      return;
+    }
+
+    const getSubjects = async () => {
+      setLoading(prev => ({ ...prev, subjects: true }));
+      try {
+        const fetchedSubjects = await fetchSubjects(selectedClass);
+        setSubjects(['all', ...fetchedSubjects]);
+      } catch (error) {
+        console.error('Error fetching subjects:', error);
+      } finally {
+        setLoading(prev => ({ ...prev, subjects: false }));
+      }
+    };
+
+    getSubjects();
+  }, [selectedClass]);
+
+  // Fetch books when a subject is selected
+  useEffect(() => {
+    if (selectedClass === 'all' || selectedSubject === 'all') {
+      setBooks(['all']);
+      return;
+    }
+
+    const getBooks = async () => {
+      setLoading(prev => ({ ...prev, books: true }));
+      try {
+        const fetchedBooks = await fetchBooks(selectedClass, selectedSubject);
+        setBooks(['all', ...fetchedBooks]);
+      } catch (error) {
+        console.error('Error fetching books:', error);
+      } finally {
+        setLoading(prev => ({ ...prev, books: false }));
+      }
+    };
+
+    getBooks();
+  }, [selectedClass, selectedSubject]);
+
+  // Fetch chapters when a book is selected
+  useEffect(() => {
+    if (selectedClass === 'all' || selectedSubject === 'all' || selectedBook === 'all') {
+      setChapters(['all']);
+      return;
+    }
+
+    const getChapters = async () => {
+      setLoading(prev => ({ ...prev, chapters: true }));
+      try {
+        const fetchedChapters = await fetchChapters(selectedClass, selectedSubject);
+        setChapters(['all', ...fetchedChapters]);
+      } catch (error) {
+        console.error('Error fetching chapters:', error);
+      } finally {
+        setLoading(prev => ({ ...prev, chapters: false }));
+      }
+    };
+
+    getChapters();
+  }, [selectedClass, selectedSubject, selectedBook]);
   return (
     <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow-sm ring-1 ring-gray-900/5">
       <div className="grid gap-3 sm:gap-4">
@@ -51,24 +147,7 @@ export default function LessonPlansFilters({
           />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-          {/* Subject Filter */}
-          <div>
-            <label htmlFor="subject-filter" className="sr-only">Subject</label>
-            <select
-              id="subject-filter"
-              value={selectedSubject}
-              onChange={(e) => onSubjectChange(e.target.value)}
-              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              {subjects.map((subject) => (
-                <option key={subject} value={subject}>
-                  {subject === 'all' ? 'All Subjects' : subject}
-                </option>
-              ))}
-            </select>
-          </div>
-
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4">
           {/* Class Filter */}
           <div>
             <label htmlFor="class-filter" className="sr-only">Class</label>
@@ -77,8 +156,11 @@ export default function LessonPlansFilters({
               value={selectedClass}
               onChange={(e) => onClassChange(e.target.value)}
               className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              disabled={loading.classes}
             >
-              {classes.map((classLevel) => (
+              {loading.classes ? (
+                <option value="loading">Loading...</option>
+              ) : classes.map((classLevel) => (
                 <option key={classLevel} value={classLevel}>
                   {classLevel === 'all' ? 'All Classes' : classLevel}
                 </option>
@@ -86,18 +168,61 @@ export default function LessonPlansFilters({
             </select>
           </div>
 
-          {/* Status Filter */}
+          {/* Subject Filter */}
           <div>
-            <label htmlFor="status-filter" className="sr-only">Status</label>
+            <label htmlFor="subject-filter" className="sr-only">Subject</label>
             <select
-              id="status-filter"
-              value={selectedStatus}
-              onChange={(e) => onStatusChange(e.target.value)}
+              id="subject-filter"
+              value={selectedSubject}
+              onChange={(e) => onSubjectChange(e.target.value)}
               className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              disabled={loading.subjects || selectedClass === 'all'}
             >
-              {statuses.map((status) => (
-                <option key={status} value={status}>
-                  {status === 'all' ? 'All Status' : status.charAt(0).toUpperCase() + status.slice(1)}
+              {loading.subjects ? (
+                <option value="loading">Loading...</option>
+              ) : subjects.map((subject) => (
+                <option key={subject} value={subject}>
+                  {subject === 'all' ? 'All Subjects' : subject}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Book Filter */}
+          <div>
+            <label htmlFor="book-filter" className="sr-only">Book</label>
+            <select
+              id="book-filter"
+              value={selectedBook}
+              onChange={(e) => onBookChange(e.target.value)}
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              disabled={loading.books || selectedClass === 'all' || selectedSubject === 'all'}
+            >
+              {loading.books ? (
+                <option value="loading">Loading...</option>
+              ) : books.map((book) => (
+                <option key={book} value={book}>
+                  {book === 'all' ? 'All Books' : book}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Chapter Filter */}
+          <div>
+            <label htmlFor="chapter-filter" className="sr-only">Chapter</label>
+            <select
+              id="chapter-filter"
+              value={selectedChapter}
+              onChange={(e) => onChapterChange(e.target.value)}
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              disabled={loading.chapters || selectedClass === 'all' || selectedSubject === 'all' || selectedBook === 'all'}
+            >
+              {loading.chapters ? (
+                <option value="loading">Loading...</option>
+              ) : chapters.map((chapter) => (
+                <option key={chapter} value={chapter}>
+                  {chapter === 'all' ? 'All Chapters' : chapter}
                 </option>
               ))}
             </select>

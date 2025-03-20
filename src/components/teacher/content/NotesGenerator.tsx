@@ -4,7 +4,7 @@ import BasicSettings from './notes/BasicSettings';
 import NoteTypeSelector from './notes/NoteTypeSelector';
 import AdvancedSettings from './notes/AdvancedSettings';
 import ConfigurationSummary from './notes/ConfigurationSummary';
-import { fetchClasses, fetchSubjects, fetchChapters, fetchResourcesByChapters } from '../../../firebase/resources';
+import { fetchClasses, fetchSubjects, fetchBooks, fetchChapters, fetchResourcesByChapters } from '../../../firebase/resources';
 import { generateNotes } from '../../../services/notesGeneration';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -26,6 +26,7 @@ export default function NotesGenerator({ isDarkMode }: NotesGeneratorProps) {
   const { currentUser } = useAuth();
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedBook, setSelectedBook] = useState('');
   const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
   const [noteType, setNoteType] = useState('bullet-points');
   const [layout, setLayout] = useState<'one-column' | 'two-column'>('one-column');
@@ -41,10 +42,12 @@ export default function NotesGenerator({ isDarkMode }: NotesGeneratorProps) {
   // State for storing data from Firebase
   const [classes, setClasses] = useState<string[]>([]);
   const [subjects, setSubjects] = useState<Record<string, string[]>>({});
+  const [books, setBooks] = useState<Record<string, string[]>>({});
   const [chapters, setChapters] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState({
     classes: false,
     subjects: false,
+    books: false,
     chapters: false
   });
 
@@ -89,17 +92,40 @@ export default function NotesGenerator({ isDarkMode }: NotesGeneratorProps) {
     getSubjects();
   }, [selectedClass]);
 
-  // Fetch chapters when a subject is selected
+  // Fetch books when a subject is selected
   useEffect(() => {
     if (!selectedClass || !selectedSubject) return;
+
+    const getBooks = async () => {
+      setLoading(prev => ({ ...prev, books: true }));
+      try {
+        const fetchedBooks = await fetchBooks(selectedClass, selectedSubject);
+        setBooks(prev => ({
+          ...prev,
+          [selectedSubject]: fetchedBooks
+        }));
+      } catch (error) {
+        console.error('Error fetching books:', error);
+        toast.error('Failed to load books. Please try again.');
+      } finally {
+        setLoading(prev => ({ ...prev, books: false }));
+      }
+    };
+
+    getBooks();
+  }, [selectedClass, selectedSubject]);
+
+  // Fetch chapters when a book is selected
+  useEffect(() => {
+    if (!selectedClass || !selectedSubject || !selectedBook) return;
 
     const getChapters = async () => {
       setLoading(prev => ({ ...prev, chapters: true }));
       try {
-        const fetchedChapters = await fetchChapters(selectedClass, selectedSubject);
+        const fetchedChapters = await fetchChapters(selectedClass, selectedSubject, selectedBook);
         setChapters(prev => ({
           ...prev,
-          [selectedSubject]: fetchedChapters
+          [selectedBook]: fetchedChapters
         }));
       } catch (error) {
         console.error('Error fetching chapters:', error);
@@ -110,13 +136,13 @@ export default function NotesGenerator({ isDarkMode }: NotesGeneratorProps) {
     };
 
     getChapters();
-  }, [selectedClass, selectedSubject]);
+  }, [selectedClass, selectedSubject, selectedBook]);
 
   const isSTEMSubject = ['Mathematics', 'Physics', 'Chemistry'].includes(selectedSubject);
 
   const handleGenerate = async () => {
-    if (!selectedClass || !selectedSubject || selectedChapters.length === 0) {
-      toast.error('Please select a class, subject, and at least one chapter');
+    if (!selectedClass || !selectedSubject || !selectedBook || selectedChapters.length === 0) {
+      toast.error('Please select a class, subject, book, and at least one chapter');
       return;
     }
 
@@ -125,7 +151,7 @@ export default function NotesGenerator({ isDarkMode }: NotesGeneratorProps) {
 
     try {
       // Fetch resources for the selected chapters
-      const resources = await fetchResourcesByChapters(selectedClass, selectedSubject, selectedChapters);
+      const resources = await fetchResourcesByChapters(selectedClass, selectedSubject, selectedChapters, selectedBook);
 
       if (resources.length === 0) {
         toast.error('No resources found for the selected chapters. Please select different chapters or contact your administrator.');
@@ -138,6 +164,7 @@ export default function NotesGenerator({ isDarkMode }: NotesGeneratorProps) {
         title: `${selectedSubject} Notes: ${selectedChapters.join(', ')}`,
         class: selectedClass,
         subject: selectedSubject,
+        book: selectedBook,
         chapters: selectedChapters,
         noteType: noteType,
         layout,
@@ -184,10 +211,13 @@ export default function NotesGenerator({ isDarkMode }: NotesGeneratorProps) {
             setSelectedClass={setSelectedClass}
             selectedSubject={selectedSubject}
             setSelectedSubject={setSelectedSubject}
+            selectedBook={selectedBook}
+            setSelectedBook={setSelectedBook}
             selectedChapters={selectedChapters}
             setSelectedChapters={setSelectedChapters}
             classes={classes}
             subjects={subjects}
+            books={books}
             chapters={chapters}
             loading={loading}
           />

@@ -93,17 +93,21 @@ export default function TemplatedSlide({ slide, template, isDarkMode }: Template
         );
         
       case 'grid':
+        // Adjust grid layout based on content length
+        const contentLength = slide.content.length;
+        const gridCols = contentLength > 4 ? 2 : 1; // Use single column for fewer items
+        
         return (
           <div 
-            className="rounded-lg p-6"
+            className="rounded-lg p-4 overflow-auto max-h-full"
             style={{ 
               backgroundColor,
               fontFamily: template.fontFamily
             }}
           >
-            <div className="relative mb-10 text-center">
+            <div className="relative mb-6 text-center">
               <span 
-                className="text-2xl font-semibold mb-4 inline-block"
+                className="text-xl md:text-2xl font-semibold mb-2 inline-block"
                 style={{ 
                   color: textColor,
                   padding: '0 1rem'
@@ -120,18 +124,19 @@ export default function TemplatedSlide({ slide, template, isDarkMode }: Template
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-6">
+            <div className={`grid grid-cols-1 md:grid-cols-${gridCols} gap-3 md:gap-4 overflow-y-auto`} 
+                 style={{ maxHeight: 'calc(100% - 80px)' }}>
               {slide.content.map((item, index) => (
                 <div
                   key={index}
-                  className="flex items-start p-3 rounded-lg"
+                  className="flex items-start p-2 md:p-3 rounded-lg"
                   style={{ 
                     border: `1px solid ${accentColor}`,
                     backgroundColor: isDarkMode ? 'rgba(55, 65, 81, 0.5)' : 'rgba(255, 255, 255, 0.5)'
                   }}
                 >
                   <span 
-                    className="w-6 h-6 rounded-full mr-3 flex items-center justify-center text-xs flex-shrink-0"
+                    className="w-5 h-5 md:w-6 md:h-6 rounded-full mr-2 md:mr-3 flex items-center justify-center text-xs flex-shrink-0"
                     style={{ 
                       backgroundColor: accentColor,
                       color: '#ffffff'
@@ -139,7 +144,7 @@ export default function TemplatedSlide({ slide, template, isDarkMode }: Template
                   >
                     {index + 1}
                   </span>
-                  <span style={{ color: textColor }}>{item}</span>
+                  <span style={{ color: textColor, fontSize: '0.95rem' }}>{item}</span>
                 </div>
               ))}
             </div>
@@ -162,13 +167,15 @@ export default function TemplatedSlide({ slide, template, isDarkMode }: Template
       }}
     >
       <div 
-        className="absolute inset-0 flex flex-col items-center p-8"
+        className="absolute inset-0 flex flex-col items-center p-4 md:p-6 lg:p-8 overflow-hidden"
         style={{ 
           backgroundColor: isDarkMode ? 'rgba(17, 24, 39, 0.7)' : 'rgba(255, 255, 255, 0.2)',
-          paddingTop: '80px'
+          paddingTop: '60px'
         }}
       >
-        {renderContent()}
+        <div className="w-full h-full overflow-auto">
+          {renderContent()}
+        </div>
       </div>
     </div>
   );

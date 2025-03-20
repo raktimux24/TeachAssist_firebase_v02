@@ -7,6 +7,7 @@ const presentationsCollection = collection(db, 'presentations');
 
 /**
  * Save a generated presentation to Firestore
+ * Checks for duplicates before saving to prevent multiple entries
  */
 export const savePresentation = async (
   presentation: Presentation,
@@ -14,7 +15,60 @@ export const savePresentation = async (
   generationOptions: Record<string, any>
 ) => {
   try {
-    // Add timestamp and user information
+    // Check for potential duplicates first
+    // We'll consider a presentation a duplicate if it has the same title, subject, class, book, and was created in the last 5 minutes
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    
+    // Query to find potential duplicates
+    // Note: Firestore only allows inequality filters (<, <=, >, >=) on a single field
+    // So we'll use only equality operators in the query and filter the rest in memory
+    const q = query(
+      presentationsCollection,
+      where('userId', '==', userId),
+      where('title', '==', presentation.title)
+      // We'll check the other conditions after fetching the results
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    // Check if we have any potential duplicates
+    if (!querySnapshot.empty) {
+      console.log(`Found ${querySnapshot.size} potential duplicate(s) with same title`);
+      
+      // Filter results in memory for the remaining conditions
+      const recentDuplicates = querySnapshot.docs.filter(doc => {
+        const data = doc.data();
+        const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt;
+        
+        return (
+          data.subject === presentation.subject &&
+          data.class === presentation.class &&
+          data.book === presentation.book &&
+          createdAt >= fiveMinutesAgo
+        );
+      });
+      
+      console.log(`Found ${recentDuplicates.length} recent duplicates with matching details`);
+      
+      // Check if any of the filtered duplicates also match the chapters
+      for (const doc of recentDuplicates) {
+        const existingPresentation = doc.data();
+        
+        // Check if chapters match (assuming they're arrays)
+        const existingChapters = existingPresentation.chapters || [];
+        const newChapters = presentation.chapters || [];
+        
+        // Simple check: same number of chapters and all chapters match
+        if (existingChapters.length === newChapters.length && 
+            existingChapters.every((ch: string) => newChapters.includes(ch))) {
+          console.log('Found exact duplicate, returning existing presentation');
+          return { id: doc.id, ...existingPresentation };
+        }
+      }
+    }
+    
+    // If no duplicates found, save the new presentation
+    console.log('No duplicates found, saving new presentation');
     const presentationData = {
       ...presentation,
       userId,

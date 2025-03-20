@@ -2,14 +2,13 @@ import { Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { fetchClasses, fetchSubjects, fetchBooks, fetchChapters } from '../../../firebase/resources';
 
-interface ClassNotesFiltersProps {
+interface PresentationFiltersProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   selectedSubject: string;
   onSubjectChange: (subject: string) => void;
   selectedClass: string;
   onClassChange: (classValue: string) => void;
-
   selectedBook: string;
   onBookChange: (book: string) => void;
   selectedChapter: string;
@@ -18,7 +17,7 @@ interface ClassNotesFiltersProps {
   onSortChange: (sortBy: string) => void;
 }
 
-export default function ClassNotesFilters({
+export default function PresentationFilters({
   searchQuery,
   onSearchChange,
   selectedSubject,
@@ -31,7 +30,7 @@ export default function ClassNotesFilters({
   onChapterChange,
   sortBy,
   onSortChange
-}: ClassNotesFiltersProps) {
+}: PresentationFiltersProps) {
   const [classes, setClasses] = useState<string[]>(['all']);
   const [subjects, setSubjects] = useState<string[]>(['all']);
   const [books, setBooks] = useState<string[]>(['all']);
@@ -125,6 +124,7 @@ export default function ClassNotesFilters({
 
     getChapters();
   }, [selectedClass, selectedSubject, selectedBook]);
+
   return (
     <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-black ring-opacity-5 rounded-lg p-4 sm:p-6">
       <div className="space-y-4">
@@ -138,7 +138,7 @@ export default function ClassNotesFilters({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="block w-full pl-9 sm:pl-10 pr-3 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            placeholder="Search class notes..."
+            placeholder="Search presentations..."
           />
         </div>
 

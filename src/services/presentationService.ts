@@ -16,11 +16,14 @@ export interface Presentation {
   type: string;
   template: string;
   slides: Slide[];
+  book?: string;
+  chapters?: string[];
 }
 
 export interface PresentationGenerationOptions {
   class: string;
   subject: string;
+  book?: string;
   chapters: string[];
   presentationType: string; // Now supports: 'Slide by Slide', 'Topic Wise', 'Chapter Wise', 'Unit Wise', 'Lesson Wise', 'Concept Wise', 'Question-Answer', 'Summary'
   slideCount: number;
@@ -391,9 +394,11 @@ const parseOpenAIResponse = (content: string, options: PresentationGenerationOpt
           title: directParse.title,
           subject: options.subject,
           class: options.class,
+          book: options.book,
           type: options.presentationType,
           template: options.designTemplate,
-          slides: directParse.slides
+          slides: directParse.slides,
+          chapters: options.chapters
         };
       } else {
         console.warn('Parsed object missing required fields, trying to extract JSON...');
@@ -419,9 +424,11 @@ const parseOpenAIResponse = (content: string, options: PresentationGenerationOpt
             title: parsedContent.title,
             subject: options.subject,
             class: options.class,
+            book: options.book,
             type: options.presentationType,
             template: options.designTemplate,
-            slides: parsedContent.slides
+            slides: parsedContent.slides,
+            chapters: options.chapters
           };
         } else {
           console.error('Extracted JSON missing required fields:', parsedContent);
@@ -511,8 +518,10 @@ const createFallbackPresentation = (options: PresentationGenerationOptions): Pre
     title: `${options.subject} - ${options.chapters.join(', ')}`,
     subject: options.subject,
     class: options.class,
+    book: options.book,
     type: options.presentationType,
     template: options.designTemplate,
-    slides
+    slides,
+    chapters: options.chapters
   };
 };

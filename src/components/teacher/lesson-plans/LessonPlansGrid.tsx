@@ -5,6 +5,7 @@ interface LessonPlan {
   title: string;
   subject: string;
   class: string;
+  book: string;
   duration: string;
   createdAt: string;
   status: 'draft' | 'published';

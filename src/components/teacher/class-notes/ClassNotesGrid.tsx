@@ -1,10 +1,11 @@
-import { FileText, Eye, Trash2, Tag } from 'lucide-react';
+import { FileText, Eye, Trash2, Book } from 'lucide-react';
 
 interface ClassNote {
   id: string;
   title: string;
   subject: string;
   class: string;
+  book: string;
   type: string;
   layout: string;
   notesCount: number;
@@ -37,7 +38,7 @@ export default function ClassNotesGrid({ notes, onDelete, onView }: ClassNotesGr
                     {note.title}
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {note.subject} • {note.class}
+                    {note.subject} • {note.class} • {note.book || 'No Book'}
                   </p>
                 </div>
               </div>
@@ -63,29 +64,15 @@ export default function ClassNotesGrid({ notes, onDelete, onView }: ClassNotesGr
               </div>
             </div>
             
-            {note.tags.length > 0 && (
-              <div className="mt-4">
-                <div className="flex items-center mb-2">
-                  <Tag className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-1" />
-                  <span className="text-xs text-gray-500 dark:text-gray-400">Topics:</span>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {note.tags.slice(0, 3).map((tag, index) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                  {note.tags.length > 3 && (
-                    <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                      +{note.tags.length - 3}
-                    </span>
-                  )}
-                </div>
+            <div className="mt-4">
+              <div className="flex items-center mb-2">
+                <Book className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-1" />
+                <span className="text-xs text-gray-500 dark:text-gray-400">Book:</span>
               </div>
-            )}
+              <div className="px-2 py-1 text-sm bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 rounded">
+                {note.book || 'No Book'}
+              </div>
+            </div>
             
             <div className="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-2">
               <button

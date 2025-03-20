@@ -174,22 +174,35 @@ export const fetchResources = async (filters: {
   }
 }; 
 
-// Fetch chapters based on class and subject
-export const fetchChapters = async (classId: string, subjectId: string): Promise<string[]> => {
+// Fetch chapters based on class, subject, and optionally book
+export const fetchChapters = async (classId: string, subjectId: string, bookId?: string): Promise<string[]> => {
   try {
-    console.log('fetchChapters: Starting with class:', classId, 'subject:', subjectId);
+    console.log('fetchChapters: Starting with class:', classId, 'subject:', subjectId, bookId ? `book: ${bookId}` : '');
     
     if (classId === 'all' || subjectId === 'all') {
       console.log('fetchChapters: Class or subject is "all", returning empty array');
       return [];
     }
     
-    // Query resources collection to get unique chapters for the given class and subject
-    const q = query(
-      collection(db, 'resources'),
-      where('class', '==', classId),
-      where('subject', '==', subjectId)
-    );
+    // Query resources collection to get unique chapters for the given class, subject, and optionally book
+    let q;
+    
+    if (bookId && bookId !== 'all') {
+      q = query(
+        collection(db, 'resources'),
+        where('class', '==', classId),
+        where('subject', '==', subjectId),
+        where('book', '==', bookId)
+      );
+      console.log('fetchChapters: Querying with book filter:', bookId);
+    } else {
+      q = query(
+        collection(db, 'resources'),
+        where('class', '==', classId),
+        where('subject', '==', subjectId)
+      );
+      console.log('fetchChapters: Querying without book filter');
+    }
     
     console.log('fetchChapters: Executing query to Firestore');
     const querySnapshot = await getDocs(q);
@@ -289,6 +302,47 @@ export const fetchSubjects = async (classId: string): Promise<string[]> => {
   }
 };
 
+// Fetch books based on class and subject selection
+export const fetchBooks = async (classId: string, subjectId: string): Promise<string[]> => {
+  console.log('fetchBooks: Starting with class:', classId, 'subject:', subjectId);
+  
+  if (classId === 'all' || subjectId === 'all') {
+    console.log('fetchBooks: Class or subject is "all", returning empty array');
+    return [];
+  }
+  
+  try {
+    // Query resources collection to get unique books for the given class and subject
+    const q = query(
+      collection(db, 'resources'),
+      where('class', '==', classId),
+      where('subject', '==', subjectId)
+    );
+    
+    console.log('fetchBooks: Executing query to Firestore');
+    const querySnapshot = await getDocs(q);
+    console.log('fetchBooks: Query completed, document count:', querySnapshot.size);
+    
+    // Extract unique books from the results
+    const booksSet = new Set<string>();
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.book) {
+        booksSet.add(data.book);
+      }
+    });
+    
+    const books = Array.from(booksSet).sort();
+    console.log('fetchBooks: Found books:', books);
+    
+    return books;
+  } catch (error) {
+    console.error('Error fetching books:', error);
+    return [];
+  }
+};
+
 /**
  * Fetch resources for multiple chapters
  * @param classId The class ID
@@ -299,9 +353,10 @@ export const fetchSubjects = async (classId: string): Promise<string[]> => {
 export const fetchResourcesByChapters = async (
   classId: string, 
   subjectId: string, 
-  chapters: string[]
+  chapters: string[],
+  bookId?: string
 ): Promise<Resource[]> => {
-  console.log('fetchResourcesByChapters: Starting with class:', classId, 'subject:', subjectId, 'chapters:', chapters);
+  console.log('fetchResourcesByChapters: Starting with class:', classId, 'subject:', subjectId, 'chapters:', chapters, bookId ? `book: ${bookId}` : '');
   
   if (!classId || !subjectId || !chapters.length) {
     console.warn('fetchResourcesByChapters: Missing required parameters');
@@ -316,12 +371,24 @@ export const fetchResourcesByChapters = async (
     for (const chapter of chapters) {
       console.log(`fetchResourcesByChapters: Querying for chapter: ${chapter}`);
       
-      const q = query(
-        resourcesRef,
-        where('class', '==', classId),
-        where('subject', '==', subjectId),
-        where('chapter', '==', chapter)
-      );
+      let q;
+      
+      if (bookId) {
+        q = query(
+          resourcesRef,
+          where('class', '==', classId),
+          where('subject', '==', subjectId),
+          where('book', '==', bookId),
+          where('chapter', '==', chapter)
+        );
+      } else {
+        q = query(
+          resourcesRef,
+          where('class', '==', classId),
+          where('subject', '==', subjectId),
+          where('chapter', '==', chapter)
+        );
+      }
       
       const querySnapshot = await getDocs(q);
       console.log(`fetchResourcesByChapters: Found ${querySnapshot.size} resources for chapter ${chapter}`);

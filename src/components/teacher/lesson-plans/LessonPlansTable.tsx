@@ -5,6 +5,7 @@ interface LessonPlan {
   title: string;
   subject: string;
   class: string;
+  book: string;
   duration: string;
   createdAt: string;
   status: 'draft' | 'published';
@@ -38,6 +39,7 @@ export default function LessonPlansTable({ plans, onEdit, onDelete, onView }: Le
             <col className="hidden sm:table-cell" />
             <col className="hidden md:table-cell" />
             <col className="hidden md:table-cell" />
+            <col className="hidden md:table-cell" />
             <col className="w-[25%] sm:w-auto" />
             <col className="hidden lg:table-cell" />
             <col className="w-[30%] sm:w-auto" />
@@ -52,6 +54,9 @@ export default function LessonPlansTable({ plans, onEdit, onDelete, onView }: Le
               </th>
               <th scope="col" className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Class
+              </th>
+              <th scope="col" className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Book
               </th>
               <th scope="col" className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Duration
@@ -78,7 +83,7 @@ export default function LessonPlansTable({ plans, onEdit, onDelete, onView }: Le
                         {plan.title}
                       </div>
                       <div className="sm:hidden text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {plan.subject} - {plan.class}
+                        {plan.subject} - {plan.class} - {plan.book}
                       </div>
                       <div className="flex flex-wrap gap-1 mt-1 max-w-[150px] sm:max-w-[200px] md:max-w-none">
                         {plan.tags.slice(0, 2).map((tag, index) => (
@@ -104,6 +109,9 @@ export default function LessonPlansTable({ plans, onEdit, onDelete, onView }: Le
                 </td>
                 <td className="hidden md:table-cell px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400">
                   {plan.class}
+                </td>
+                <td className="hidden md:table-cell px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400">
+                  {plan.book}
                 </td>
                 <td className="hidden md:table-cell px-3 sm:px-6 py-3 sm:py-4">
                   <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">

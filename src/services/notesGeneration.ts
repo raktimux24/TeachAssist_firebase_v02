@@ -1,6 +1,6 @@
  import { Resource } from '../types/resource';
 import { db } from '../firebase/config';
-import { collection, addDoc, serverTimestamp, DocumentReference, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, DocumentReference, query, where, orderBy, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
 export interface Note {
   id: string;
@@ -12,6 +12,7 @@ export interface NotesSet {
   title: string;
   subject: string;
   class: string;
+  book?: string; // Optional book property
   chapters: string[];
   type: string;
   layout: 'one-column' | 'two-column';
@@ -24,6 +25,7 @@ export interface NotesSet {
 export interface NotesGenerationOptions {
   class: string;
   subject: string;
+  book?: string; // Optional book property
   chapters: string[];
   title?: string; // Add optional title property
   noteType: string;
@@ -144,6 +146,7 @@ export const saveNotesToFirestore = async (
       title: notesSet.title,
       subject: notesSet.subject,
       class: notesSet.class,
+      book: notesSet.book || null,
       chapters: notesSet.chapters,
       type: notesSet.type,
       layout: notesSet.layout,
@@ -166,6 +169,26 @@ export const saveNotesToFirestore = async (
   } catch (error) {
     console.error('Error saving notes to Firestore:', error);
     return null;
+  }
+};
+
+/**
+ * Deletes a notes document from Firestore by ID
+ */
+export const deleteNotes = async (noteId: string): Promise<boolean> => {
+  try {
+    if (!noteId) {
+      throw new Error('Note ID is required to delete notes');
+    }
+    
+    // Delete the document from Firestore
+    await deleteDoc(doc(db, 'classnotes', noteId));
+    console.log('Notes deleted from Firestore with ID:', noteId);
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting notes from Firestore:', error);
+    return false;
   }
 };
 
@@ -202,6 +225,7 @@ export const getUserNotes = async (userId: string): Promise<NotesSet[]> => {
         title: data.title || '',
         subject: data.subject || '',
         class: data.class || '',
+        book: data.book || '',
         chapters: data.chapters || [],
         type: data.type || '',
         layout: data.layout || 'one-column',
@@ -229,7 +253,7 @@ const createSystemPrompt = (options: NotesGenerationOptions): string => {
   
   return `You are an expert educational content creator specializing in creating high-quality notes for students.
 Your task is to generate a set of notes based on the PDF content that will be provided.
-The notes should be tailored for ${options.class} students studying ${options.subject}.
+The notes should be tailored for ${options.class} students studying ${options.subject}${options.book ? ` using the book "${options.book}"` : ''}.
 
 The notes should follow the "${noteTypeDescription}" format and include the following types of content:
 ${options.includeDefinitions ? '- Definitions of key terms and concepts' : ''}
@@ -248,6 +272,7 @@ Format your response as a JSON object with the following structure:
   "title": "Notes title",
   "subject": "${options.subject}",
   "class": "${options.class}",
+  "book": "${options.book || ''}",
   "chapters": [${options.chapters.map(chapter => `"${chapter}"`).join(', ')}],
   "type": "${options.noteType}",
   "layout": "${options.layout}",
@@ -277,7 +302,7 @@ IMPORTANT: Your response must be a valid JSON object without any additional text
  * Creates the user prompt for the OpenAI API
  */
 const createUserPrompt = (options: NotesGenerationOptions, pdfUrls: string[]): string => {
-  return `Please create notes for ${options.class} ${options.subject} covering the following chapters: ${options.chapters.join(', ')}.
+  return `Please create notes for ${options.class} ${options.subject}${options.book ? ` from the book "${options.book}"` : ''} covering the following chapters: ${options.chapters.join(', ')}.
   
 The content is available in the following PDF files:
 ${pdfUrls.map(url => `- ${url}`).join('\n')}
@@ -331,6 +356,10 @@ const parseOpenAIResponse = (content: string, options: NotesGenerationOptions): 
       
       if (!parsedContent.class) {
         parsedContent.class = options.class;
+      }
+      
+      if (!parsedContent.book && options.book) {
+        parsedContent.book = options.book;
       }
       
       if (!parsedContent.chapters || !Array.isArray(parsedContent.chapters)) {
@@ -420,6 +449,7 @@ const createDefaultNotesSet = (options: NotesGenerationOptions): NotesSet => {
     title: `${options.subject} - ${options.chapters.join(', ')} Notes`,
     subject: options.subject,
     class: options.class,
+    book: options.book,
     chapters: options.chapters,
     type: options.noteType,
     layout: options.layout,

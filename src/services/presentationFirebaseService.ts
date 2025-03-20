@@ -8,6 +8,8 @@ export interface FirebasePresentation extends Presentation {
   userId: string;
   createdAt: Date;
   updatedAt?: Date;
+  book?: string;
+  chapters?: string[];
 }
 
 /**
@@ -27,7 +29,9 @@ export const savePresentation = async (presentation: Presentation, userId: strin
       slides: presentation.slides,
       userId: userId,
       createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      updatedAt: serverTimestamp(),
+      book: presentation.book,
+      chapters: presentation.chapters
     };
     
     // Add the document to Firestore

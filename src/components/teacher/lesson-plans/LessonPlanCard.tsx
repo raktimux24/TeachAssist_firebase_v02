@@ -5,6 +5,7 @@ interface LessonPlan {
   title: string;
   subject: string;
   class: string;
+  book: string;
   duration: string;
   createdAt: string;
   status: 'draft' | 'published';
@@ -38,6 +39,10 @@ export default function LessonPlanCard({ plan, onEdit, onDelete, onView }: Lesso
         <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
           <BookOpen className="w-4 h-4 mr-2 flex-shrink-0" />
           <span className="truncate">{plan.subject} - {plan.class}</span>
+        </div>
+        <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+          <BookOpen className="w-4 h-4 mr-2 flex-shrink-0" />
+          <span className="truncate">{plan.book}</span>
         </div>
         <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
           <Clock className="w-4 h-4 mr-2 flex-shrink-0" />

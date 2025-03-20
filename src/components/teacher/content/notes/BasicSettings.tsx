@@ -1,18 +1,22 @@
-import { BookOpen, GraduationCap, Layers } from 'lucide-react';
+import { BookOpen, GraduationCap, Layers, Book } from 'lucide-react';
 
 interface BasicSettingsProps {
   selectedClass: string;
   setSelectedClass: (value: string) => void;
   selectedSubject: string;
   setSelectedSubject: (value: string) => void;
+  selectedBook: string;
+  setSelectedBook: (value: string) => void;
   selectedChapters: string[];
   setSelectedChapters: (value: string[]) => void;
   classes: string[];
   subjects: Record<string, string[]>;
+  books: Record<string, string[]>;
   chapters: Record<string, string[]>;
   loading: {
     classes: boolean;
     subjects: boolean;
+    books: boolean;
     chapters: boolean;
   };
 }
@@ -22,10 +26,13 @@ export default function BasicSettings({
   setSelectedClass,
   selectedSubject,
   setSelectedSubject,
+  selectedBook,
+  setSelectedBook,
   selectedChapters,
   setSelectedChapters,
   classes,
   subjects,
+  books,
   chapters,
   loading,
 }: BasicSettingsProps) {
@@ -43,6 +50,7 @@ export default function BasicSettings({
               onChange={(e) => {
                 setSelectedClass(e.target.value);
                 setSelectedSubject('');
+                setSelectedBook('');
                 setSelectedChapters([]);
               }}
               disabled={loading.classes}
@@ -76,6 +84,7 @@ export default function BasicSettings({
               value={selectedSubject}
               onChange={(e) => {
                 setSelectedSubject(e.target.value);
+                setSelectedBook('');
                 setSelectedChapters([]);
               }}
               disabled={!selectedClass || loading.subjects}
@@ -100,6 +109,39 @@ export default function BasicSettings({
         </div>
       </div>
 
+      {/* Book Selection */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Select Book
+        </label>
+        <div className="relative">
+          <select
+            value={selectedBook}
+            onChange={(e) => {
+              setSelectedBook(e.target.value);
+              setSelectedChapters([]);
+            }}
+            disabled={!selectedSubject || loading.books}
+            className="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">Select a book</option>
+            {loading.books ? (
+              <option value="" disabled>Loading books...</option>
+            ) : (
+              selectedSubject && books[selectedSubject]?.map((book) => (
+                <option key={book} value={book}>{book}</option>
+              ))
+            )}
+          </select>
+          <Book className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+          {loading.books && (
+            <div className="absolute right-3 top-2.5">
+              <div className="animate-spin h-5 w-5 border-2 border-primary-500 rounded-full border-t-transparent"></div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Chapter Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -112,13 +154,13 @@ export default function BasicSettings({
             onChange={(e) => setSelectedChapters(
               Array.from(e.target.selectedOptions, option => option.value)
             )}
-            disabled={!selectedSubject || loading.chapters}
+            disabled={!selectedBook || loading.chapters}
             className="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 h-32 min-h-[8rem]"
           >
             {loading.chapters ? (
               <option value="" disabled>Loading chapters...</option>
             ) : (
-              selectedSubject && chapters[selectedSubject]?.map((chapter) => (
+              selectedBook && chapters[selectedBook]?.map((chapter) => (
                 <option key={chapter} value={chapter}>{chapter}</option>
               ))
             )}

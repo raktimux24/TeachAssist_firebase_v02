@@ -5,7 +5,7 @@ import BasicSettings from './presentations/BasicSettings';
 import PresentationTypeSelector from './presentations/PresentationTypeSelector';
 import AdvancedSettings from './presentations/AdvancedSettings';
 import ConfigurationSummary from './presentations/ConfigurationSummary';
-import { fetchClasses, fetchSubjects, fetchChapters, fetchResourcesByChapters } from '../../../firebase/resources';
+import { fetchClasses, fetchSubjects, fetchBooks, fetchChapters, fetchResourcesByChapters } from '../../../firebase/resources';
 import { generatePresentation, testOpenAIConnection, PresentationGenerationOptions } from '../../../services/presentationService';
 import { Resource } from '../../../types/resource';
 
@@ -51,6 +51,7 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
   const { currentUser } = useAuth();
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedBook, setSelectedBook] = useState('');
   const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
   const [presentationType, setPresentationType] = useState('slide-by-slide');
   const [slideCount, setSlideCount] = useState(20);
@@ -60,15 +61,18 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
   // State for storing data from the database
   const [classes, setClasses] = useState<string[]>([]);
   const [subjects, setSubjects] = useState<string[]>([]);
+  const [books, setBooks] = useState<string[]>([]);
   const [chapters, setChapters] = useState<string[]>([]);
   const [loading, setLoading] = useState({
     classes: false,
     subjects: false,
+    books: false,
     chapters: false
   });
   const [error, setError] = useState({
     classes: '',
     subjects: '',
+    books: '',
     chapters: ''
   });
   const [generatingPresentation, setGeneratingPresentation] = useState(false);
@@ -119,10 +123,39 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
     getSubjects();
   }, [selectedClass]);
 
-  // Fetch chapters when a subject is selected
+  // Fetch books when a subject is selected
+  useEffect(() => {
+    const getBooks = async () => {
+      if (!selectedClass || !selectedSubject) {
+        setBooks([]);
+        setSelectedBook('');
+        return;
+      }
+      
+      try {
+        setLoading(prev => ({ ...prev, books: true }));
+        setError(prev => ({ ...prev, books: '' }));
+        
+        const booksData = await fetchBooks(selectedClass, selectedSubject);
+        setBooks(booksData);
+        
+        // Reset selected book when subject changes
+        setSelectedBook('');
+      } catch (err) {
+        console.error('Error fetching books:', err);
+        setError(prev => ({ ...prev, books: 'Failed to load books' }));
+      } finally {
+        setLoading(prev => ({ ...prev, books: false }));
+      }
+    };
+    
+    getBooks();
+  }, [selectedClass, selectedSubject]);
+
+  // Fetch chapters when a book is selected
   useEffect(() => {
     const getChapters = async () => {
-      if (!selectedClass || !selectedSubject) {
+      if (!selectedClass || !selectedSubject || !selectedBook) {
         setChapters([]);
         return;
       }
@@ -131,7 +164,7 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
         setLoading(prev => ({ ...prev, chapters: true }));
         setError(prev => ({ ...prev, chapters: '' }));
         
-        const chaptersData = await fetchChapters(selectedClass, selectedSubject);
+        const chaptersData = await fetchChapters(selectedClass, selectedSubject, selectedBook);
         setChapters(chaptersData);
       } catch (err) {
         console.error('Error fetching chapters:', err);
@@ -142,12 +175,12 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
     };
     
     getChapters();
-  }, [selectedClass, selectedSubject]);
+  }, [selectedClass, selectedSubject, selectedBook]);
 
   const handleGenerate = async () => {
     // Validate inputs
-    if (!selectedClass || !selectedSubject || selectedChapters.length === 0) {
-      setGenerationError('Please select class, subject, and at least one chapter');
+    if (!selectedClass || !selectedSubject || !selectedBook || selectedChapters.length === 0) {
+      setGenerationError('Please select class, subject, book, and at least one chapter');
       return;
     }
     
@@ -159,6 +192,7 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
       console.log('Presentation configuration:', {
         class: selectedClass,
         subject: selectedSubject,
+        book: selectedBook,
         chapters: selectedChapters,
         presentationType,
         slideCount,
@@ -178,7 +212,7 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
       
       // Fetch resources for the selected chapters
       console.log('Fetching resources for selected chapters...');
-      const resources: Resource[] = await fetchResourcesByChapters(selectedClass, selectedSubject, selectedChapters);
+      const resources: Resource[] = await fetchResourcesByChapters(selectedClass, selectedSubject, selectedChapters, selectedBook);
       
       if (resources.length === 0) {
         console.warn('No resources found for the selected chapters');
@@ -188,6 +222,7 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
       const options: PresentationGenerationOptions = {
         class: selectedClass,
         subject: selectedSubject,
+        book: selectedBook,
         chapters: selectedChapters,
         presentationType,
         slideCount,
@@ -206,6 +241,7 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
       sessionStorage.setItem('presentationGenerationOptions', JSON.stringify({
         class: selectedClass,
         subject: selectedSubject,
+        book: selectedBook,
         chapters: selectedChapters,
         presentationType,
         slideCount,
@@ -242,10 +278,13 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
             setSelectedClass={setSelectedClass}
             selectedSubject={selectedSubject}
             setSelectedSubject={setSelectedSubject}
+            selectedBook={selectedBook}
+            setSelectedBook={setSelectedBook}
             selectedChapters={selectedChapters}
             setSelectedChapters={setSelectedChapters}
             classes={classes}
             subjects={subjects}
+            books={books}
             chapters={chapters}
             loading={loading}
             error={error}
@@ -272,6 +311,7 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
           <ConfigurationSummary
             selectedClass={selectedClass}
             selectedSubject={selectedSubject}
+            selectedBook={selectedBook}
             selectedChapters={selectedChapters}
             presentationType={presentationType}
             slideCount={slideCount}
@@ -288,9 +328,9 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
             </button>
             <button
               onClick={handleGenerate}
-              disabled={!selectedClass || !selectedSubject || selectedChapters.length === 0 || generatingPresentation}
+              disabled={!selectedClass || !selectedSubject || !selectedBook || selectedChapters.length === 0 || generatingPresentation}
               className={`px-6 py-2 rounded-lg text-white ${
-                !selectedClass || !selectedSubject || selectedChapters.length === 0 || generatingPresentation
+                !selectedClass || !selectedSubject || !selectedBook || selectedChapters.length === 0 || generatingPresentation
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-primary-600 hover:bg-primary-700'
               }`}

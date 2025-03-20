@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import TeacherLayout from '../../components/teacher/TeacherLayout';
 import { getUserPresentations, FirebasePresentation, deletePresentation } from '../../services/presentationFirebaseService';
 import { useAuth } from '../../contexts/AuthContext';
-import { LayoutGrid, List, Plus, Search, Filter, SlidersHorizontal, Eye, Trash2 } from 'lucide-react';
+import { LayoutGrid, List, Plus, Eye, Trash2 } from 'lucide-react';
+import PresentationFilters from '../../components/teacher/presentation/PresentationFilters';
 
 interface PresentationsListProps {
   isDarkMode: boolean;
@@ -14,6 +15,8 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedClass, setSelectedClass] = useState('all');
+  const [selectedBook, setSelectedBook] = useState('all');
+  const [selectedChapter, setSelectedChapter] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [presentations, setPresentations] = useState<FirebasePresentation[]>([]);
@@ -63,8 +66,16 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
       // Filter by class
       const matchesClass = selectedClass === 'all' || 
         (presentation.class && presentation.class.toLowerCase() === selectedClass.toLowerCase());
+
+      // Filter by book
+      const matchesBook = selectedBook === 'all' || 
+        (presentation.book && presentation.book === selectedBook);
       
-      return matchesSearch && matchesSubject && matchesClass;
+      // Filter by chapter
+      const matchesChapter = selectedChapter === 'all' || 
+        (presentation.chapters && Array.isArray(presentation.chapters) && presentation.chapters.includes(selectedChapter));
+      
+      return matchesSearch && matchesSubject && matchesClass && matchesBook && matchesChapter;
     })
     .sort((a, b) => {
       // Sort by selected sort option
@@ -82,15 +93,33 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
     });
 
   // Convert presentations to the format expected by the components
-  const formattedPresentations = filteredAndSortedPresentations.map(presentation => ({
-    id: presentation.firebaseId || '',
-    title: presentation.title || 'Untitled Presentation',
-    subject: presentation.subject || 'No Subject',
-    class: presentation.class || 'No Class',
-    type: presentation.type || 'standard',
-    slideCount: presentation.slides?.length || 0,
-    createdAt: presentation.createdAt instanceof Date ? presentation.createdAt.toLocaleDateString() : 'Unknown Date',
-  }));
+  const formattedPresentations = filteredAndSortedPresentations.map(presentation => {
+    // Extract book name from the first chapter if book is not available
+    // This is for backward compatibility with presentations that don't have the book property
+    let bookName = presentation.book || '';
+    
+    // If no book name is available and there are chapters, try to extract book name from the first chapter
+    if (!bookName && Array.isArray(presentation.chapters) && presentation.chapters.length > 0) {
+      // Chapters might be in format "Book Name - Chapter Name"
+      const firstChapter = presentation.chapters[0];
+      const dashIndex = firstChapter.indexOf(' - ');
+      if (dashIndex > 0) {
+        bookName = firstChapter.substring(0, dashIndex);
+      }
+    }
+
+    return {
+      id: presentation.firebaseId || '',
+      title: presentation.title || 'Untitled Presentation',
+      subject: presentation.subject || 'No Subject',
+      class: presentation.class || 'No Class',
+      book: bookName || 'No Book',
+      type: presentation.type || 'standard',
+      slideCount: presentation.slides?.length || 0,
+      createdAt: presentation.createdAt instanceof Date ? presentation.createdAt.toLocaleDateString() : 'Unknown Date',
+      chapters: Array.isArray(presentation.chapters) ? presentation.chapters : []
+    };
+  });
 
   // Handle delete action
   const handleDelete = async (id: string) => {
@@ -110,9 +139,7 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
     navigate(`/teacher/content/presentations/${id}`);
   };
 
-  // Get unique subjects and classes for filters
-  const subjects = ['all', ...new Set(presentations.map(p => p.subject).filter(Boolean))];
-  const classes = ['all', ...new Set(presentations.map(p => p.class).filter(Boolean))];
+
 
   return (
     <TeacherLayout isDarkMode={isDarkMode} onThemeToggle={onThemeToggle}>
@@ -156,84 +183,20 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
         </div>
 
         {/* Filters Section */}
-        <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            {/* Search Input */}
-            <div className="relative flex-grow">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search presentations..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 sm:text-sm text-gray-900 dark:text-white"
-              />
-            </div>
-
-            {/* Subject Filter */}
-            <div className="relative w-full sm:w-48">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Filter className="h-5 w-5 text-gray-400" />
-              </div>
-              <select
-                id="subject-filter"
-                value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-                className="block w-full pl-10 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 sm:text-sm text-gray-900 dark:text-white"
-              >
-                <option value="all">All Subjects</option>
-                {subjects
-                  .filter(subject => subject !== 'all')
-                  .map(subject => (
-                    <option key={subject} value={subject}>
-                      {subject}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            {/* Class Filter */}
-            <div className="relative w-full sm:w-48">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Filter className="h-5 w-5 text-gray-400" />
-              </div>
-              <select
-                id="class-filter"
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
-                className="block w-full pl-10 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 sm:text-sm text-gray-900 dark:text-white"
-              >
-                <option value="all">All Classes</option>
-                {classes
-                  .filter(classItem => classItem !== 'all')
-                  .map(classItem => (
-                    <option key={classItem} value={classItem}>
-                      {classItem}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            {/* Sort By */}
-            <div className="relative w-full sm:w-48">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <SlidersHorizontal className="h-5 w-5 text-gray-400" />
-              </div>
-              <select
-                id="sort-by"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="block w-full pl-10 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 sm:text-sm text-gray-900 dark:text-white"
-              >
-                <option value="date">Date (Newest)</option>
-                <option value="title">Title (A-Z)</option>
-                <option value="subject">Subject (A-Z)</option>
-              </select>
-            </div>
-          </div>
-        </div>
+        <PresentationFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          selectedSubject={selectedSubject}
+          onSubjectChange={setSelectedSubject}
+          selectedClass={selectedClass}
+          onClassChange={setSelectedClass}
+          selectedBook={selectedBook}
+          onBookChange={setSelectedBook}
+          selectedChapter={selectedChapter}
+          onChapterChange={setSelectedChapter}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+        />
 
         {/* Content Section */}
         <div className="min-h-[300px] w-full">
@@ -282,6 +245,9 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
                           Class
                         </th>
                         <th scope="col" className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Book
+                        </th>
+                        <th scope="col" className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Slides
                         </th>
                         <th scope="col" className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -303,6 +269,9 @@ export default function PresentationsList({ isDarkMode, onThemeToggle }: Present
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-500 dark:text-gray-400">{presentation.class}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{presentation.book}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-500 dark:text-gray-400">{presentation.slideCount}</div>

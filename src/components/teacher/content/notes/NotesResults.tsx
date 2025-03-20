@@ -22,7 +22,6 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string>('');
 
   useEffect(() => {
     const loadNotes = async () => {
@@ -34,7 +33,7 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
       if (firestoreNoteId) {
         try {
           // Try to load the notes from Firestore
-          setDebugInfo(`Attempting to load notes from Firestore with ID: ${firestoreNoteId}`);
+          console.log(`Attempting to load notes from Firestore with ID: ${firestoreNoteId}`);
           const docRef = doc(db, 'classnotes', firestoreNoteId);
           const docSnap = await getDoc(docRef);
           
@@ -59,20 +58,19 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
             };
             
             setNotesSet(loadedNotesSet);
-            setDebugInfo(prev => `${prev}\nSuccessfully loaded notes from Firestore with ${loadedNotesSet.notes?.length || 0} notes`);
+            console.log(`Successfully loaded notes from Firestore with ${loadedNotesSet.notes?.length || 0} notes`);
             
             // Set the first note as active by default
             if (loadedNotesSet.notes && loadedNotesSet.notes.length > 0) {
               setActiveNoteId(loadedNotesSet.notes[0].id);
             }
           } else {
-            setDebugInfo(prev => `${prev}\nNo notes found in Firestore with ID: ${firestoreNoteId}`);
+            console.log(`No notes found in Firestore with ID: ${firestoreNoteId}`);
             // If not found in Firestore, fall back to localStorage
             loadFromLocalStorage();
           }
         } catch (error) {
           console.error('Error loading notes from Firestore:', error);
-          setDebugInfo(prev => `${prev}\nError loading notes from Firestore: ${error instanceof Error ? error.message : String(error)}`);
           // Fall back to localStorage
           loadFromLocalStorage();
         }
@@ -91,7 +89,6 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
       if (storedNotes) {
         try {
           console.log('Raw stored notes:', storedNotes);
-          setDebugInfo(prev => `${prev}\nRaw stored notes length: ${storedNotes.length}`);
           
           const parsedNotes = JSON.parse(storedNotes);
           console.log('Parsed notes:', parsedNotes);
@@ -104,7 +101,6 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
           // Ensure notes array exists and has content
           if (!parsedNotes.notes || !Array.isArray(parsedNotes.notes) || parsedNotes.notes.length === 0) {
             console.error('Notes array is empty or invalid:', parsedNotes.notes);
-            setDebugInfo(prev => `${prev}\nNotes array is empty or invalid: ${JSON.stringify(parsedNotes.notes)}`);
             
             // Create a default note if none exists
             parsedNotes.notes = [
@@ -122,12 +118,12 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
           }
           
           setNotesSet(parsedNotes);
-          setDebugInfo(prev => `${prev}\nNotes set successfully with ${parsedNotes.notes?.length || 0} notes`);
+          console.log(`Notes set successfully with ${parsedNotes.notes?.length || 0} notes`);
           
           // Set the first note as active by default
           if (parsedNotes.notes && parsedNotes.notes.length > 0) {
             setActiveNoteId(parsedNotes.notes[0].id);
-            setDebugInfo(prev => `${prev}\nSet active note ID to: ${parsedNotes.notes[0].id}`);
+            console.log(`Set active note ID to: ${parsedNotes.notes[0].id}`);
           }
           
           // If notes were loaded from localStorage and user is logged in, save to Firestore
@@ -136,14 +132,12 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
           }
         } catch (error) {
           console.error('Error parsing notes:', error);
-          setDebugInfo(prev => `${prev}\nError parsing notes: ${error instanceof Error ? error.message : String(error)}`);
           toast.error('Failed to load generated notes');
         }
       } else {
         // Don't show error if we're loading from a specific ID
         if (!noteId && !urlNoteId) {
           console.log('No stored notes found in localStorage');
-          setDebugInfo('No stored notes found in localStorage');
           toast.error('No generated notes found');
         }
       }
@@ -175,12 +169,11 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
           };
         });
         
-        setDebugInfo(prev => `${prev}\nNotes saved to Firestore with ID: ${docRef.id}`);
+        console.log(`Notes saved to Firestore with ID: ${docRef.id}`);
         toast.success('Notes saved to your account');
       }
     } catch (error) {
       console.error('Error saving notes to Firestore:', error);
-      setDebugInfo(prev => `${prev}\nError saving to Firestore: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -270,14 +263,7 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
         >
           Go Back
         </button>
-        {debugInfo && (
-          <div className="mt-8 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg text-left">
-            <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">Debug Information:</h3>
-            <pre className="whitespace-pre-wrap text-xs text-gray-600 dark:text-gray-400 overflow-auto max-h-64">
-              {debugInfo}
-            </pre>
-          </div>
-        )}
+
       </div>
     );
   }
@@ -376,15 +362,7 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
         </div>
       </div>
       
-      {/* Debug information in development mode */}
-      {process.env.NODE_ENV !== 'production' && debugInfo && (
-        <div className="mt-8 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-          <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">Debug Information:</h3>
-          <pre className="whitespace-pre-wrap text-xs text-gray-600 dark:text-gray-400 overflow-auto max-h-64">
-            {debugInfo}
-          </pre>
-        </div>
-      )}
+
     </div>
   );
 }

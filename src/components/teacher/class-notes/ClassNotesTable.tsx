@@ -5,6 +5,7 @@ interface ClassNote {
   title: string;
   subject: string;
   class: string;
+  book: string;
   type: string;
   layout: string;
   notesCount: number;
@@ -36,13 +37,13 @@ export default function ClassNotesTable({ notes, onDelete, onView }: ClassNotesT
                 Class
               </th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                Book
+              </th>
+              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
                 Type
               </th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
                 Created
-              </th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                Tags
               </th>
               <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                 <span className="sr-only">Actions</span>
@@ -61,6 +62,9 @@ export default function ClassNotesTable({ notes, onDelete, onView }: ClassNotesT
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {note.class}
                 </td>
+                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                  {note.book || 'No Book'}
+                </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm">
                   <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                     {note.type.charAt(0).toUpperCase() + note.type.slice(1)}
@@ -68,23 +72,6 @@ export default function ClassNotesTable({ notes, onDelete, onView }: ClassNotesT
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {note.createdAt}
-                </td>
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                  <div className="flex flex-wrap gap-1">
-                    {note.tags.slice(0, 2).map((tag, index) => (
-                      <span 
-                        key={index} 
-                        className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                    {note.tags.length > 2 && (
-                      <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                        +{note.tags.length - 2}
-                      </span>
-                    )}
-                  </div>
                 </td>
                 <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                   <div className="flex justify-end space-x-2">

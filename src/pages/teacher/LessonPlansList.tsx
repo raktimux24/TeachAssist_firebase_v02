@@ -5,9 +5,10 @@ import LessonPlansFilters from '../../components/teacher/lesson-plans/LessonPlan
 import LessonPlansTable from '../../components/teacher/lesson-plans/LessonPlansTable';
 import LessonPlansGrid from '../../components/teacher/lesson-plans/LessonPlansGrid';
 import LessonPlansActionPanel from '../../components/teacher/lesson-plans/LessonPlansActionPanel';
-import { getUserLessonPlans, LessonPlan } from '../../services/lessonPlanGeneration';
+import { getUserLessonPlans, LessonPlan, deleteLessonPlan } from '../../services/lessonPlanGeneration';
 import { useAuth } from '../../contexts/AuthContext';
 import { LayoutGrid, List, Plus } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface LessonPlansListProps {
   isDarkMode: boolean;
@@ -18,7 +19,8 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedClass, setSelectedClass] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedBook, setSelectedBook] = useState('all');
+  const [selectedChapter, setSelectedChapter] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
@@ -70,10 +72,15 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
       const matchesClass = selectedClass === 'all' || 
         (plan.class && plan.class.toLowerCase() === selectedClass.toLowerCase());
       
-      // Filter by status (assuming we add a status field to lesson plans in the future)
-      const matchesStatus = selectedStatus === 'all'; // For now, we don't have a status field
+      // Filter by book
+      const matchesBook = selectedBook === 'all' || 
+        (plan.book && plan.book.toLowerCase() === selectedBook.toLowerCase());
       
-      return matchesSearch && matchesSubject && matchesClass && matchesStatus;
+      // Filter by chapter
+      const matchesChapter = selectedChapter === 'all' || 
+        (plan.chapters && plan.chapters.some(chapter => chapter.toLowerCase() === selectedChapter.toLowerCase()));
+      
+      return matchesSearch && matchesSubject && matchesClass && matchesBook && matchesChapter;
     })
     .sort((a, b) => {
       // Sort by selected sort option
@@ -96,6 +103,7 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
     title: plan.title || 'Untitled Lesson Plan',
     subject: plan.subject || 'No Subject',
     class: plan.class || 'No Class',
+    book: plan.book || 'No Book',
     duration: `${plan.numberOfClasses || 1} ${(plan.numberOfClasses || 1) > 1 ? 'classes' : 'class'}`,
     createdAt: plan.createdAt instanceof Date ? plan.createdAt.toLocaleDateString() : 'Unknown Date',
     status: 'published' as const, // For now, all plans are considered published
@@ -107,11 +115,40 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
     navigate(`/teacher/content/lesson-plans/edit/${id}`);
   };
 
-  const handleDelete = (id: string) => {
-    // TODO: Implement delete functionality
-    console.log('Delete lesson plan:', id);
-    // After confirmation, remove the plan from state
-    setLessonPlans(prev => prev.filter(plan => plan.firebaseId !== id));
+  const handleDelete = async (id: string) => {
+    // Ask for confirmation before deleting
+    if (!window.confirm('Are you sure you want to delete this lesson plan? This action cannot be undone.')) {
+      return; // User canceled the deletion
+    }
+    
+    console.log('Deleting lesson plan with ID:', id);
+    
+    // Show loading toast
+    toast.loading('Deleting lesson plan...', { id: 'delete-lesson-plan' });
+    
+    try {
+      // Call the deleteLessonPlan function to delete from Firestore
+      const success = await deleteLessonPlan(id);
+      console.log('Delete operation result:', success);
+      
+      if (success) {
+        // If deletion was successful, update the UI
+        setLessonPlans(prev => {
+          console.log('Updating UI, removing plan with ID:', id);
+          return prev.filter(plan => {
+            console.log('Checking plan:', plan.firebaseId, 'against', id);
+            return plan.firebaseId !== id;
+          });
+        });
+        toast.success('Lesson plan deleted successfully!', { id: 'delete-lesson-plan' });
+      } else {
+        // If deletion failed, show error message
+        toast.error('Failed to delete lesson plan. Please try again.', { id: 'delete-lesson-plan' });
+      }
+    } catch (error) {
+      console.error('Error deleting lesson plan:', error);
+      toast.error('An error occurred while deleting the lesson plan.', { id: 'delete-lesson-plan' });
+    }
   };
 
   const handleView = (id: string) => {
@@ -167,8 +204,10 @@ export default function LessonPlansList({ isDarkMode, onThemeToggle }: LessonPla
           onSubjectChange={setSelectedSubject}
           selectedClass={selectedClass}
           onClassChange={setSelectedClass}
-          selectedStatus={selectedStatus}
-          onStatusChange={setSelectedStatus}
+          selectedBook={selectedBook}
+          onBookChange={setSelectedBook}
+          selectedChapter={selectedChapter}
+          onChapterChange={setSelectedChapter}
           sortBy={sortBy}
           onSortChange={setSortBy}
         />

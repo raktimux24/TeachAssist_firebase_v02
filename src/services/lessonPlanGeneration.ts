@@ -1,6 +1,6 @@
 import { Resource } from '../types/resource';
 import { db } from '../firebase/config';
-import { collection, addDoc, serverTimestamp, DocumentReference, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, DocumentReference, query, where, getDocs, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 export interface LessonPlanSection {
   id: string;
@@ -12,6 +12,7 @@ export interface LessonPlan {
   title: string;
   subject: string;
   class: string;
+  book?: string; // Optional book name
   chapters: string[];
   format: 'general' | 'subject-specific';
   numberOfClasses: number;
@@ -26,6 +27,7 @@ export interface LessonPlan {
 export interface LessonPlanGenerationOptions {
   class: string;
   subject: string;
+  book?: string; // Optional book name
   chapters: string[];
   title?: string; // Optional title property
   format: 'general' | 'subject-specific';
@@ -141,6 +143,7 @@ export const saveLessonPlanToFirestore = async (
       title: lessonPlan.title,
       subject: lessonPlan.subject,
       class: lessonPlan.class,
+      book: lessonPlan.book || null, // Add the book field
       chapters: lessonPlan.chapters,
       format: lessonPlan.format,
       numberOfClasses: lessonPlan.numberOfClasses,
@@ -202,6 +205,7 @@ export const getUserLessonPlans = async (userId: string): Promise<LessonPlan[]> 
         title: data.title || '',
         subject: data.subject || '',
         class: data.class || '',
+        book: data.book || null, // Add the book field
         chapters: data.chapters || [],
         format: data.format || 'general',
         numberOfClasses: data.numberOfClasses || 1,
@@ -568,6 +572,11 @@ const parseOpenAIResponse = (content: string, options: LessonPlanGenerationOptio
         parsedContent.class = options.class;
       }
       
+      // Ensure book field is present
+      if (!parsedContent.book && options.book) {
+        parsedContent.book = options.book;
+      }
+      
       if (!parsedContent.chapters || !Array.isArray(parsedContent.chapters)) {
         parsedContent.chapters = options.chapters;
       }
@@ -668,6 +677,7 @@ const createDefaultLessonPlan = (options: LessonPlanGenerationOptions): LessonPl
     title: `${options.subject} - ${options.chapters.join(', ')} Lesson Plan`,
     subject: options.subject,
     class: options.class,
+    book: options.book, // Add the book field
     chapters: options.chapters,
     format: options.format,
     numberOfClasses: options.numberOfClasses,
@@ -712,4 +722,54 @@ While general lesson plans provide a broad structure, **subject-specific plans d
 Both general and subject-specific lesson plans within the CBSE framework are increasingly influenced by modern teaching methods that emphasize **student-centered learning**, **experiential learning**, and **competency-based education**. Strategies like **inquiry-based learning** and **problem-based learning** are encouraged across subjects. The goal is to move away from rote memorization towards building actual knowledge and skills. Differentiation to address diverse learning needs is also a crucial aspect integrated into both general frameworks and subject-specific applications. Furthermore, the integration of technology and **AI tools** is being explored to enhance lesson planning and resource creation.
 
 In essence, while general lesson plans provide a common foundation for effective teaching, subject-specific lesson plans build upon this foundation by incorporating the unique pedagogical needs and content of different disciplines, ensuring a more targeted and effective learning experience for students. CBSE's approach emphasizes a blend of structured planning with flexibility to adapt to the specific demands of each subject while aligning with national educational goals.`;
+};
+
+/**
+ * Deletes a lesson plan from Firestore
+ * @param id The Firestore document ID of the lesson plan to delete
+ * @returns A boolean indicating whether the deletion was successful
+ */
+export const deleteLessonPlan = async (id: string): Promise<boolean> => {
+  try {
+    console.log(`Attempting to delete lesson plan with ID ${id}`);
+    
+    if (!id) {
+      console.error('Cannot delete lesson plan: No ID provided');
+      return false;
+    }
+    
+    // First check if the document exists
+    const docRef = doc(db, 'lessonplan', id);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      console.error(`Lesson plan with ID ${id} does not exist in the 'lessonplan' collection`);
+      
+      // Let's try to find it in other possible collections
+      console.log('Trying alternative collection name: lessonPlans');
+      const altDocRef = doc(db, 'lessonPlans', id);
+      const altDocSnap = await getDoc(altDocRef);
+      
+      if (altDocSnap.exists()) {
+        console.log(`Found lesson plan in 'lessonPlans' collection instead`);
+        await deleteDoc(altDocRef);
+        console.log(`Successfully deleted lesson plan with ID ${id} from 'lessonPlans' collection`);
+        return true;
+      } else {
+        console.error(`Lesson plan with ID ${id} not found in any collection`);
+        return false;
+      }
+    }
+    
+    // Delete the document from the primary collection
+    console.log(`Deleting document from 'lessonplan' collection`);
+    await deleteDoc(docRef);
+    
+    console.log(`Successfully deleted lesson plan with ID ${id}`);
+    return true;
+    
+  } catch (error) {
+    console.error('Error deleting lesson plan:', error);
+    return false;
+  }
 };
