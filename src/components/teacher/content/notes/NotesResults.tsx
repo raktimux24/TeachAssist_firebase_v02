@@ -178,7 +178,7 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
   };
 
   const handleGoBack = () => {
-    navigate('/teacher/content/notes');
+    navigate('/teacher/notes');
   };
 
   const handlePrint = () => {
@@ -261,7 +261,7 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
           onClick={handleGoBack}
           className="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700"
         >
-          Go Back
+          Back
         </button>
 
       </div>
@@ -280,7 +280,7 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
             className="flex items-center text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-500 mb-2"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
-            <span>Back to Generator</span>
+            <span>Back</span>
           </button>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             {notesSet.title || 'Generated Notes'}
