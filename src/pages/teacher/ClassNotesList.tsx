@@ -216,7 +216,7 @@ export default function ClassNotesList({ isDarkMode, onThemeToggle }: ClassNotes
           />
 
           {/* Content Section */}
-          <div className="min-h-[300px] w-full">
+          <div className="min-h-[200px] sm:min-h-[250px] md:min-h-[300px] w-full">
             {loading ? (
               <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-black ring-opacity-5 rounded-lg p-4 sm:p-6 md:p-8 text-center">
                 <div className="flex flex-col items-center justify-center">
@@ -247,14 +247,12 @@ export default function ClassNotesList({ isDarkMode, onThemeToggle }: ClassNotes
               </div>
             ) : viewMode === 'table' ? (
               <div className="transition-all duration-300 w-full px-1 sm:px-0">
-                <div className="overflow-x-auto -mx-4 sm:-mx-0 rounded-lg">
-                  <div className="w-full min-w-[640px] pb-2">
-                    <ClassNotesTable
-                      notes={formattedNotes}
-                      onDelete={handleDelete}
-                      onView={handleView}
-                    />
-                  </div>
+                <div className="rounded-lg">
+                  <ClassNotesTable
+                    notes={formattedNotes}
+                    onDelete={handleDelete}
+                    onView={handleView}
+                  />
                 </div>
               </div>
             ) : (

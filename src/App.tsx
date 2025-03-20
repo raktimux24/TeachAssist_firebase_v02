@@ -133,7 +133,7 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-white dark:bg-gray-900">
+      <div className="min-h-screen bg-white dark:bg-gray-900 overflow-x-hidden max-w-[100vw]">
         <Routes>
           {/* Public Routes - accessible without authentication */}
           <Route element={<PublicRoute />}>

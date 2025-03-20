@@ -476,11 +476,11 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
           )}
         </div>
         
-        <div className="flex space-x-2 mt-4 md:mt-0">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:space-x-2 mt-4 md:mt-0">
           {questionSet.includeAnswers && (
             <button
               onClick={handleToggleAnswers}
-              className={`flex items-center px-3 py-2 rounded-lg border font-medium ${
+              className={`flex items-center justify-center px-2 sm:px-3 py-2 rounded-lg border font-medium text-sm sm:text-base ${
                 showAnswers 
                   ? 'bg-primary-100 dark:bg-primary-900/20 border-primary-300 dark:border-primary-700'
                   : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
@@ -491,21 +491,21 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
           )}
           <button
             onClick={handleCopyToClipboard}
-            className="flex items-center px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+            className="flex items-center justify-center px-2 sm:px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm sm:text-base"
           >
             {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
             <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
           <button
             onClick={handleDownload}
-            className="flex items-center px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+            className="flex items-center justify-center px-2 sm:px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm sm:text-base"
           >
             <Download className="h-4 w-4 mr-1" />
             <span>Download</span>
           </button>
           <button
             onClick={handlePrint}
-            className="flex items-center px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+            className="flex items-center justify-center px-2 sm:px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm sm:text-base"
           >
             <Printer className="h-4 w-4 mr-1" />
             <span>Print</span>

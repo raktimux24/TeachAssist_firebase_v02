@@ -22,8 +22,60 @@ interface ClassNotesTableProps {
 export default function ClassNotesTable({ notes, onDelete, onView }: ClassNotesTableProps) {
   return (
     <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-      <div className="overflow-x-auto -mx-2 sm:-mx-0">
-        <div className="w-full min-w-[640px]">
+      {/* Mobile Card View */}
+      <div className="block md:hidden">
+        <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          {notes.map((note) => (
+            <div key={note.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[70%]">{note.title}</h3>
+                <div className="flex space-x-1">
+                  <button
+                    onClick={() => onView(note.id)}
+                    className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300 p-1"
+                    title="View"
+                  >
+                    <Eye className="h-4 w-4 transition-transform duration-200 hover:scale-110" />
+                    <span className="sr-only">View</span>
+                  </button>
+                  <button
+                    onClick={() => onDelete(note.id)}
+                    className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4 transition-transform duration-200 hover:scale-110" />
+                    <span className="sr-only">Delete</span>
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+                <div className="text-gray-500 dark:text-gray-400">Subject:</div>
+                <div className="text-gray-900 dark:text-gray-300 font-medium">{note.subject}</div>
+                
+                <div className="text-gray-500 dark:text-gray-400">Class:</div>
+                <div className="text-gray-900 dark:text-gray-300 font-medium">{note.class}</div>
+                
+                <div className="text-gray-500 dark:text-gray-400">Book:</div>
+                <div className="text-gray-900 dark:text-gray-300 font-medium">{note.book || 'No Book'}</div>
+                
+                <div className="text-gray-500 dark:text-gray-400">Type:</div>
+                <div className="text-gray-900 dark:text-gray-300 font-medium">
+                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                    {note.type.charAt(0).toUpperCase() + note.type.slice(1)}
+                  </span>
+                </div>
+                
+                <div className="text-gray-500 dark:text-gray-400">Created:</div>
+                <div className="text-gray-900 dark:text-gray-300 font-medium">{note.createdAt}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-x-auto -mx-2 sm:-mx-0">
+        <div className="w-full">
           <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>

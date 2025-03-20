@@ -42,20 +42,20 @@ export default function TeacherHeader({ onMenuClick, isDarkMode, onThemeToggle }
 
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex h-14 sm:h-16 items-center justify-between">
-          <div className="flex items-center">
+      <div className="px-2 sm:px-6 lg:px-8">
+        <div className="flex h-12 sm:h-14 md:h-16 items-center justify-between">
+          <div className="flex items-center flex-shrink min-w-0 max-w-[70%] sm:max-w-[80%]">
             {/* Mobile Menu Button */}
             <button
               type="button"
-              className="lg:hidden -ml-1.5 sm:-ml-2 mr-2 p-1.5 sm:p-2 rounded-md text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+              className="lg:hidden -ml-1 sm:-ml-2 mr-1.5 sm:mr-2 p-1 sm:p-1.5 md:p-2 rounded-md text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex-shrink-0"
               onClick={onMenuClick}
               aria-label="Open menu"
             >
-              <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
+              <Menu className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
             </button>
             {/* Page Title */}
-            <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 dark:text-white truncate max-w-[200px] sm:max-w-none">
+            <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-gray-900 dark:text-white truncate">
               {location.pathname === '/teacher' ? 'Teacher Dashboard' :
                location.pathname === '/teacher/content' ? 'Content Generation' :
                location.pathname === '/teacher/lessons' ? 'Lesson Plans' :
@@ -64,17 +64,17 @@ export default function TeacherHeader({ onMenuClick, isDarkMode, onThemeToggle }
                'Teacher Panel'}
             </h1>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
             {/* Theme Toggle */}
             <button
               onClick={onThemeToggle}
-              className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-1 sm:p-1.5 md:p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               aria-label="Toggle theme"
             >
               {isDarkMode ? (
-                <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300" />
+                <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-gray-600 dark:text-gray-300" />
               ) : (
-                <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300" />
+                <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-gray-600 dark:text-gray-300" />
               )}
             </button>
             {/* User Menu */}

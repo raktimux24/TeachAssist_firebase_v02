@@ -151,36 +151,36 @@ export default function PresentationView({ isDarkMode, onThemeToggle }: Presenta
             </h1>
           </div>
           
-          <div className="flex space-x-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:space-x-2 w-full sm:w-auto">
             <button
               onClick={handleEdit}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-700"
+              className="inline-flex items-center justify-center px-2 sm:px-3 py-2 border border-gray-300 shadow-sm text-xs sm:text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-700"
             >
-              <Edit className="h-4 w-4 mr-2" />
+              <Edit className="h-4 w-4 mr-1 sm:mr-2" />
               Edit
             </button>
             
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50 dark:bg-gray-800 dark:text-red-400 dark:border-gray-700 dark:hover:bg-gray-700"
+              className="inline-flex items-center justify-center px-2 sm:px-3 py-2 border border-gray-300 shadow-sm text-xs sm:text-sm leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50 dark:bg-gray-800 dark:text-red-400 dark:border-gray-700 dark:hover:bg-gray-700"
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="h-4 w-4 mr-1 sm:mr-2" />
               Delete
             </button>
             
             <button
               onClick={handleDownload}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-700"
+              className="inline-flex items-center justify-center px-2 sm:px-3 py-2 border border-gray-300 shadow-sm text-xs sm:text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-700"
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="h-4 w-4 mr-1 sm:mr-2" />
               Download
             </button>
             
             <button
               onClick={handleCopy}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-700"
+              className="inline-flex items-center justify-center px-2 sm:px-3 py-2 border border-gray-300 shadow-sm text-xs sm:text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-700"
             >
-              <Copy className="h-4 w-4 mr-2" />
+              <Copy className="h-4 w-4 mr-1 sm:mr-2" />
               Copy
             </button>
           </div>

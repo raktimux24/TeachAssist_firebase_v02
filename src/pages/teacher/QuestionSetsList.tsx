@@ -212,7 +212,7 @@ export default function QuestionSetsList({ isDarkMode, onThemeToggle }: Question
             <div className="transition-all duration-300 w-full">
               {viewMode === 'table' ? (
                 <div className="overflow-x-auto -mx-3 sm:-mx-0 rounded-lg">
-                  <div className="w-full min-w-[600px] pb-2">
+                  <div className="w-full pb-2">
                     <QuestionSetsTable
                       sets={formattedSets}
                       onDelete={handleDelete}
