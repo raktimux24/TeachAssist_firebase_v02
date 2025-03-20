@@ -1,6 +1,6 @@
 import { Resource } from '../types/resource';
 import { db } from '../firebase/config';
-import { collection, addDoc, serverTimestamp, DocumentReference, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, DocumentReference, query, where, orderBy, getDocs, doc, deleteDoc } from 'firebase/firestore';
 
 export interface Question {
   id: string;
@@ -474,4 +474,22 @@ const createDefaultQuestionSet = (options: QuestionSetGenerationOptions): Questi
     questions: defaultQuestions,
     createdAt: new Date()
   };
+};
+
+/**
+ * Deletes a question set from Firestore
+ */
+export const deleteQuestionSet = async (id: string): Promise<void> => {
+  try {
+    if (!id) {
+      throw new Error('Question set ID is required for deletion');
+    }
+
+    const docRef = doc(db, 'questionsets', id);
+    await deleteDoc(docRef);
+    console.log('Question set deleted successfully:', id);
+  } catch (error) {
+    console.error('Error deleting question set:', error);
+    throw error;
+  }
 };
