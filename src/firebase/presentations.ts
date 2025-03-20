@@ -1,6 +1,7 @@
 import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc, orderBy, limit } from 'firebase/firestore';
 import { db } from './config';
 import { Presentation } from '../services/presentationService';
+import { updateContentStats } from '../services/contentStatsService';
 
 // Collection reference
 const presentationsCollection = collection(db, 'presentations');
@@ -78,6 +79,20 @@ export const savePresentation = async (
     };
     
     const docRef = await addDoc(presentationsCollection, presentationData);
+    
+    // Update content stats to increment the presentations count
+    try {
+      console.log('Updating content stats for user:', userId);
+      await updateContentStats(userId, {
+        type: 'presentations',
+        operation: 'increment'
+      });
+      console.log('Content stats updated successfully');
+    } catch (statsError) {
+      console.error('Error updating content stats:', statsError);
+      // Don't throw here, we still want to return the presentation data even if stats update fails
+    }
+    
     return { id: docRef.id, ...presentationData };
   } catch (error) {
     console.error('Error saving presentation:', error);
@@ -134,14 +149,41 @@ export const getPresentation = async (presentationId: string) => {
  */
 export const updatePresentation = async (
   presentationId: string,
-  updates: Partial<Presentation>
+  updates: Partial<Presentation>,
+  isNewPresentation: boolean = false // Flag to indicate if this is a new presentation being updated
 ) => {
   try {
     const docRef = doc(presentationsCollection, presentationId);
+    
+    // Check if the document exists first
+    const docSnap = await getDoc(docRef);
+    const exists = docSnap.exists();
+    // Use type assertion to access userId
+    const userId = (updates as any).userId || (exists ? docSnap.data().userId : null);
+    
+    // If it's a new presentation and doesn't exist yet, we need to increment content stats
+    const shouldUpdateStats = isNewPresentation && !exists && userId;
+    
+    // Update the document
     await updateDoc(docRef, {
       ...updates,
       updatedAt: new Date()
     });
+    
+    // Update content stats if needed
+    if (shouldUpdateStats) {
+      try {
+        console.log('Updating content stats for user:', userId);
+        await updateContentStats(userId, {
+          type: 'presentations',
+          operation: 'increment'
+        });
+        console.log('Content stats updated successfully');
+      } catch (statsError) {
+        console.error('Error updating content stats:', statsError);
+        // Don't throw here, we still want to return the presentation data even if stats update fails
+      }
+    }
     
     return { id: presentationId, ...updates };
   } catch (error) {
@@ -156,7 +198,37 @@ export const updatePresentation = async (
 export const deletePresentation = async (presentationId: string) => {
   try {
     const docRef = doc(presentationsCollection, presentationId);
+    
+    // First get the presentation to get the userId
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      console.warn('Presentation not found for deletion:', presentationId);
+      return false;
+    }
+    
+    const presentationData = docSnap.data();
+    const userId = presentationData.userId;
+    
+    // Delete the presentation
     await deleteDoc(docRef);
+    
+    // Update content stats to decrement the presentations count
+    if (userId) {
+      try {
+        console.log('Updating content stats for user:', userId);
+        await updateContentStats(userId, {
+          type: 'presentations',
+          operation: 'decrement'
+        });
+        console.log('Content stats updated successfully after deletion');
+      } catch (statsError) {
+        console.error('Error updating content stats after deletion:', statsError);
+        // Don't throw here, we still want to return success even if stats update fails
+      }
+    } else {
+      console.warn('No userId found for presentation, cannot update content stats');
+    }
+    
     return true;
   } catch (error) {
     console.error('Error deleting presentation:', error);

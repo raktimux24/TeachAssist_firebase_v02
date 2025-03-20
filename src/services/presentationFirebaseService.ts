@@ -1,6 +1,7 @@
 import { db } from '../firebase/config';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Presentation } from './presentationService';
+import { updateContentStats } from './contentStatsService';
 
 // Extended Presentation interface with Firebase-specific fields
 export interface FirebasePresentation extends Presentation {
@@ -37,6 +38,19 @@ export const savePresentation = async (presentation: Presentation, userId: strin
     // Add the document to Firestore
     const docRef = await addDoc(collection(db, 'presentations'), presentationData);
     console.log('Presentation saved with ID:', docRef.id);
+    
+    // Update content stats to increment the presentations count
+    try {
+      console.log('Updating content stats for user:', userId);
+      await updateContentStats(userId, {
+        type: 'presentations',
+        operation: 'increment'
+      });
+      console.log('Content stats updated successfully');
+    } catch (statsError) {
+      console.error('Error updating content stats:', statsError);
+      // Don't throw here, we still want to return the presentation ID even if stats update fails
+    }
     
     return docRef.id;
   } catch (error) {
@@ -156,10 +170,35 @@ export const deletePresentation = async (presentationId: string): Promise<void> 
   try {
     console.log('Deleting presentation with ID:', presentationId);
     
+    // Get the presentation first to get the userId
     const docRef = doc(db, 'presentations', presentationId);
-    await deleteDoc(docRef);
+    const docSnap = await getDoc(docRef);
     
+    if (!docSnap.exists()) {
+      throw new Error('Presentation not found');
+    }
+    
+    const presentationData = docSnap.data();
+    const userId = presentationData.userId;
+    
+    // Delete the document
+    await deleteDoc(docRef);
     console.log('Presentation deleted successfully');
+    
+    // Update content stats to decrement the presentations count
+    if (userId) {
+      try {
+        console.log('Updating content stats for user:', userId);
+        await updateContentStats(userId, {
+          type: 'presentations',
+          operation: 'decrement'
+        });
+        console.log('Content stats updated successfully');
+      } catch (statsError) {
+        console.error('Error updating content stats:', statsError);
+        // Don't throw here, we still want to consider the deletion successful
+      }
+    }
   } catch (error) {
     console.error('Error deleting presentation:', error);
     throw new Error('Failed to delete presentation');
