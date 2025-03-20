@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, Printer, Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Download, Printer, Copy, Check } from 'lucide-react';
 import { QuestionSet, saveQuestionSetToFirestore } from '../../../../services/questionSetGeneration';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'react-hot-toast';
@@ -23,9 +23,7 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
   const [copied, setCopied] = useState(false);
   const [showAnswers, setShowAnswers] = useState(true);
   const [debugInfo, setDebugInfo] = useState<string>('');
-  const [generationOptions, setGenerationOptions] = useState<any>(null);
-  const [apiRequestData, setApiRequestData] = useState<any>(null);
-  const [showGenerationDetails, setShowGenerationDetails] = useState(false);
+  // Generation details state variables removed as they're no longer needed
 
   useEffect(() => {
     const loadQuestionSet = async () => {
@@ -46,14 +44,7 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
           if (docSnap.exists()) {
             const data = docSnap.data();
             
-            // Get generation options and API request data if available
-            if (data.generationOptions) {
-              setGenerationOptions(data.generationOptions);
-            }
-            
-            if (data.apiRequestData) {
-              setApiRequestData(data.apiRequestData);
-            }
+            // Generation options and API request data handling removed as they're no longer needed
             
             // Convert Firestore timestamps to Date objects
             const createdAt = data.createdAt?.toDate() || new Date();
@@ -345,78 +336,7 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
       });
   };
 
-  const renderGenerationDetails = () => {
-    if (!generationOptions && !apiRequestData) return null;
-    
-    return (
-      <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
-        <div 
-          className="flex items-center justify-between cursor-pointer" 
-          onClick={() => setShowGenerationDetails(!showGenerationDetails)}
-        >
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Generation Details
-          </h3>
-          <button className="text-gray-500 dark:text-gray-400">
-            {showGenerationDetails ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </button>
-        </div>
-        
-        {showGenerationDetails && (
-          <div className="mt-4 space-y-4">
-            {generationOptions && (
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <h4 className="text-md font-medium text-gray-900 dark:text-white mb-2">Generation Options</h4>
-                <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
-                  <p><span className="font-medium">Class:</span> {generationOptions.class}</p>
-                  <p><span className="font-medium">Subject:</span> {generationOptions.subject}</p>
-                  <p><span className="font-medium">Chapters:</span> {generationOptions.chapters?.join(', ')}</p>
-                  <p><span className="font-medium">Difficulty:</span> {generationOptions.difficulty}</p>
-                  <p><span className="font-medium">Include Answers:</span> {generationOptions.includeAnswers ? 'Yes' : 'No'}</p>
-                  
-                  {generationOptions.questionTypes && (
-                    <div>
-                      <p className="font-medium">Question Types:</p>
-                      <ul className="list-disc list-inside ml-2">
-                        {Object.keys(generationOptions.questionTypes).map((type) => {
-                          const count = Number(generationOptions.questionTypes[type]);
-                          return count > 0 ? (
-                            <li key={type}>{type}: {count}</li>
-                          ) : null;
-                        })}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  <p><span className="font-medium">Resources:</span> {generationOptions.resourceCount} resources used</p>
-                </div>
-              </div>
-            )}
-            
-            {apiRequestData && (
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <h4 className="text-md font-medium text-gray-900 dark:text-white mb-2">API Request Data</h4>
-                <div className="text-sm">
-                  <div className="mb-2">
-                    <p className="font-medium text-gray-900 dark:text-white">System Prompt:</p>
-                    <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                      {apiRequestData.systemPrompt}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">User Prompt:</p>
-                    <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                      {apiRequestData.userPrompt}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
+  // Generation details component function removed as requested
 
   if (loading) {
     return (
@@ -676,8 +596,7 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
         ))}
       </div>
       
-      {/* Generation details section */}
-      {renderGenerationDetails()}
+      {/* Generation details section removed as requested */}
       
       {/* Debug information in development mode - hidden from UI */}
       {/* {process.env.NODE_ENV !== 'production' && debugInfo && (

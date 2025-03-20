@@ -16,6 +16,51 @@ export default function TeacherHeader({ onMenuClick, isDarkMode, onThemeToggle }
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { logout, userInfo } = useAuth();
+  
+  // Function to get the page title based on the current path
+  const getPageTitle = () => {
+    const path = location.pathname;
+    console.log('Current path:', path); // For debugging
+    
+    // Main sections
+    if (path === '/teacher') return 'Teacher Dashboard';
+    if (path === '/teacher/content') return 'Content Generation';
+    if (path === '/teacher/lessons') return 'Lesson Plans';
+    if (path === '/teacher/notes') return 'Class Notes';
+    if (path === '/teacher/resources') return 'My Resources';
+    if (path === '/teacher/settings') return 'Settings';
+    if (path === '/teacher/presentations') return 'Presentations';
+    if (path === '/teacher/question-sets') return 'Question Sets';
+    if (path === '/teacher/flashcards') return 'Flashcards';
+    
+    // Flashcards
+    if (path.includes('/teacher/content/flashcards/results')) return 'Flashcards Results';
+    if (path.includes('/teacher/content/flashcards/view')) return 'View Flashcards';
+    if (path.includes('/teacher/content/flashcards/edit')) return 'Edit Flashcards';
+    if (path.includes('/teacher/content/flashcards')) return 'Flashcards Generator';
+    
+    // Question Sets
+    if (path.includes('/teacher/content/question-sets/results')) return 'Question Set Results';
+    if (path.includes('/teacher/content/question-sets')) return 'Question Set Generator';
+    
+    // Class Notes
+    if (path.includes('/teacher/content/notes/results')) return 'Class Notes Results';
+    if (path.includes('/teacher/content/notes/view')) return 'View Class Notes';
+    if (path.includes('/teacher/content/notes')) return 'Class Notes Generator';
+    
+    // Lesson Plans
+    if (path.includes('/teacher/content/lesson-plans/results')) return 'Lesson Plan Results';
+    if (path.includes('/teacher/content/lesson-plans/view')) return 'View Lesson Plan';
+    if (path.includes('/teacher/content/lesson-plans/edit')) return 'Edit Lesson Plan';
+    if (path.includes('/teacher/content/lesson-plans')) return 'Lesson Plan Generator';
+    
+    // Presentations
+    if (path.includes('/teacher/content/presentations/results')) return 'Presentation Results';
+    if (path.includes('/teacher/content/presentations')) return 'Presentation Generator';
+    
+    // Default fallback
+    return 'Teacher Panel';
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -56,12 +101,7 @@ export default function TeacherHeader({ onMenuClick, isDarkMode, onThemeToggle }
             </button>
             {/* Page Title */}
             <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-gray-900 dark:text-white truncate">
-              {location.pathname === '/teacher' ? 'Teacher Dashboard' :
-               location.pathname === '/teacher/content' ? 'Content Generation' :
-               location.pathname === '/teacher/lessons' ? 'Lesson Plans' :
-               location.pathname === '/teacher/resources' ? 'My Resources' :
-               location.pathname === '/teacher/settings' ? 'Settings' :
-               'Teacher Panel'}
+              {getPageTitle()}
             </h1>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
