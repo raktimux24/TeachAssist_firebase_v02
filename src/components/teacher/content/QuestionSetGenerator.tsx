@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import BasicSettings from './question-sets/BasicSettings';
 import QuestionTypeSelector from './question-sets/QuestionTypeSelector';
 import ConfigurationSummary from './question-sets/ConfigurationSummary';
-import { fetchClasses, fetchSubjects, fetchChapters, fetchResourcesByChapters } from '../../../firebase/resources';
+import { fetchClasses, fetchSubjects, fetchBooks, fetchChapters, fetchResourcesByChapters } from '../../../firebase/resources';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../../contexts/AuthContext';
 import { generateQuestionSet, QuestionSetGenerationOptions } from '../../../services/questionSetGeneration';
@@ -18,6 +18,7 @@ export default function QuestionSetGenerator({ isDarkMode }: QuestionSetGenerato
   const { currentUser } = useAuth();
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedBook, setSelectedBook] = useState('');
   const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
   const [difficulty, setDifficulty] = useState('medium');
   const [includeAnswers, setIncludeAnswers] = useState(true);
@@ -35,10 +36,12 @@ export default function QuestionSetGenerator({ isDarkMode }: QuestionSetGenerato
   // State for storing data from Firebase
   const [classes, setClasses] = useState<string[]>([]);
   const [subjects, setSubjects] = useState<Record<string, string[]>>({});
+  const [books, setBooks] = useState<Record<string, string[]>>({});
   const [chapters, setChapters] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState({
     classes: false,
     subjects: false,
+    books: false,
     chapters: false
   });
 
@@ -83,17 +86,40 @@ export default function QuestionSetGenerator({ isDarkMode }: QuestionSetGenerato
     getSubjects();
   }, [selectedClass]);
 
-  // Fetch chapters when a subject is selected
+  // Fetch books when a subject is selected
   useEffect(() => {
     if (!selectedClass || !selectedSubject) return;
+
+    const getBooks = async () => {
+      setLoading(prev => ({ ...prev, books: true }));
+      try {
+        const fetchedBooks = await fetchBooks(selectedClass, selectedSubject);
+        setBooks(prev => ({
+          ...prev,
+          [`${selectedClass}-${selectedSubject}`]: fetchedBooks
+        }));
+      } catch (error) {
+        console.error('Error fetching books:', error);
+        toast.error('Failed to load books. Please try again.');
+      } finally {
+        setLoading(prev => ({ ...prev, books: false }));
+      }
+    };
+
+    getBooks();
+  }, [selectedClass, selectedSubject]);
+
+  // Fetch chapters when a book is selected
+  useEffect(() => {
+    if (!selectedClass || !selectedSubject || !selectedBook) return;
 
     const getChapters = async () => {
       setLoading(prev => ({ ...prev, chapters: true }));
       try {
-        const fetchedChapters = await fetchChapters(selectedClass, selectedSubject);
+        const fetchedChapters = await fetchChapters(selectedClass, selectedSubject, selectedBook);
         setChapters(prev => ({
           ...prev,
-          [selectedSubject]: fetchedChapters
+          [`${selectedSubject}-${selectedBook}`]: fetchedChapters
         }));
       } catch (error) {
         console.error('Error fetching chapters:', error);
@@ -104,7 +130,7 @@ export default function QuestionSetGenerator({ isDarkMode }: QuestionSetGenerato
     };
 
     getChapters();
-  }, [selectedClass, selectedSubject]);
+  }, [selectedClass, selectedSubject, selectedBook]);
 
   const totalQuestions = Object.values(questionTypes).reduce((sum, count) => sum + count, 0);
 
@@ -117,6 +143,11 @@ export default function QuestionSetGenerator({ isDarkMode }: QuestionSetGenerato
 
     if (!selectedSubject) {
       toast.error('Please select a subject');
+      return;
+    }
+
+    if (!selectedBook) {
+      toast.error('Please select a book');
       return;
     }
 
@@ -146,7 +177,8 @@ export default function QuestionSetGenerator({ isDarkMode }: QuestionSetGenerato
       const resources = await fetchResourcesByChapters(
         selectedClass,
         selectedSubject,
-        selectedChapters
+        selectedChapters,
+        selectedBook
       );
       
       console.log(`Found ${resources.length} resources matching the criteria`);
@@ -167,7 +199,7 @@ export default function QuestionSetGenerator({ isDarkMode }: QuestionSetGenerato
           subject: selectedSubject,
           chapter: selectedChapters[0],
           chapters: selectedChapters,
-          book: '',
+          book: selectedBook,
           createdAt: null,
           updatedAt: null,
           userId: currentUser?.uid || ''
@@ -181,6 +213,7 @@ export default function QuestionSetGenerator({ isDarkMode }: QuestionSetGenerato
       const options: QuestionSetGenerationOptions = {
         class: selectedClass,
         subject: selectedSubject,
+        book: selectedBook,
         chapters: selectedChapters,
         title: `${selectedSubject} Question Set: ${selectedChapters.join(', ')}`,
         difficulty,
@@ -198,26 +231,96 @@ export default function QuestionSetGenerator({ isDarkMode }: QuestionSetGenerato
       
       console.log('Question set generated successfully:', generatedQuestionSet);
       
-      // Save to localStorage for persistence
-      localStorage.setItem('generatedQuestionSet', JSON.stringify(generatedQuestionSet));
-      console.log('Question set saved to localStorage');
-      
-      // Navigate to the results page
-      toast.success('Question set generated successfully!', { id: toastId });
-      
-      // If the question set has a Firestore ID, navigate to the results page with the ID
+      // Check if we have a valid Firestore ID
       if (generatedQuestionSet.firebaseId) {
+        // Save to localStorage for persistence
+        localStorage.setItem('generatedQuestionSet', JSON.stringify(generatedQuestionSet));
+        console.log('Question set saved to localStorage');
+        
+        // Navigate to the results page
+        toast.success('Question set generated successfully!', { id: toastId });
         console.log(`Navigating to results page with ID: ${generatedQuestionSet.firebaseId}`);
         navigate(`/teacher/content/question-sets/results/${generatedQuestionSet.firebaseId}`);
       } else {
+        // If we don't have a Firestore ID, something went wrong with saving
+        console.log('No Firestore ID returned, saving to localStorage only');
+        
+        // Generate a unique key for localStorage
+        const localStorageKey = `questionset_local_${new Date().getTime()}`;
+        
+        // Add metadata to help with debugging
+        const localQuestionSet = {
+          ...generatedQuestionSet,
+          _localStorageKey: localStorageKey,
+          _failedFirestoreSave: true,
+          _saveAttemptTime: new Date().toISOString(),
+          _saveOptions: {
+            class: selectedClass,
+            subject: selectedSubject,
+            book: selectedBook,
+            chapters: selectedChapters.join(', '),
+            questionCount: generatedQuestionSet.questions.length
+          }
+        };
+        
+        localStorage.setItem(localStorageKey, JSON.stringify(localQuestionSet));
+        
+        // Also save to the standard key for the results page
+        localStorage.setItem('generatedQuestionSet', JSON.stringify(localQuestionSet));
+        
+        toast.success('Question set generated successfully (saved locally)!', { id: toastId });
         console.log('Navigating to general results page');
         navigate('/teacher/content/question-sets/results');
       }
     } catch (error) {
       console.error('Error generating question set:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error details:', errorMessage);
-      toast.error(`Failed to generate question set: ${errorMessage}`, { id: toastId });
+      
+      // Extract error message with more details
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        console.error('Error name:', error.name);
+        console.error('Error stack:', error.stack);
+      }
+      
+      // Check if it's a Firebase error
+      const isFirebaseError = errorMessage.includes('firebase') || 
+                            errorMessage.includes('Firestore') || 
+                            errorMessage.includes('permission') || 
+                            errorMessage.includes('failed-precondition');
+      
+      if (isFirebaseError) {
+        // For Firebase errors, provide a more user-friendly message
+        toast.error('There was a problem saving to the database. Your question set has been saved locally.', { id: toastId });
+        
+        // Try to save locally as a fallback
+        try {
+          const localStorageKey = `questionset_error_${new Date().getTime()}`;
+          const partialQuestionSet = {
+            title: `${selectedSubject} Question Set: ${selectedChapters.join(', ')}`,
+            subject: selectedSubject,
+            class: selectedClass,
+            book: selectedBook,
+            chapters: selectedChapters,
+            difficulty,
+            includeAnswers,
+            questions: [], // We don't have questions since generation failed
+            createdAt: new Date(),
+            userId: currentUser?.uid,
+            _error: errorMessage,
+            _errorTime: new Date().toISOString(),
+            _localStorageKey: localStorageKey
+          };
+          
+          localStorage.setItem(localStorageKey, JSON.stringify(partialQuestionSet));
+          console.log('Saved error information to localStorage with key:', localStorageKey);
+        } catch (localStorageError) {
+          console.error('Error saving to localStorage:', localStorageError);
+        }
+      } else {
+        // For other errors, show the actual error message
+        toast.error(`Failed to generate question set: ${errorMessage}`, { id: toastId });
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -241,10 +344,13 @@ export default function QuestionSetGenerator({ isDarkMode }: QuestionSetGenerato
             setSelectedClass={setSelectedClass}
             selectedSubject={selectedSubject}
             setSelectedSubject={setSelectedSubject}
+            selectedBook={selectedBook}
+            setSelectedBook={setSelectedBook}
             selectedChapters={selectedChapters}
             setSelectedChapters={setSelectedChapters}
             classes={classes}
             subjects={subjects}
+            books={books}
             chapters={chapters}
             loading={loading}
             isDarkMode={isDarkMode}

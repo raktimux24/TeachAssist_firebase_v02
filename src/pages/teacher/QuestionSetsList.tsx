@@ -5,9 +5,10 @@ import QuestionSetsFilters from '../../components/teacher/question-sets/Question
 import QuestionSetsTable from '../../components/teacher/question-sets/QuestionSetsTable';
 import QuestionSetsGrid from '../../components/teacher/question-sets/QuestionSetsGrid';
 import QuestionSetsActionPanel from '../../components/teacher/question-sets/QuestionSetsActionPanel';
-import { getUserQuestionSets, QuestionSet } from '../../services/questionSetGeneration';
+import { getUserQuestionSets, deleteQuestionSet, QuestionSet } from '../../services/questionSetGeneration';
 import { useAuth } from '../../contexts/AuthContext';
 import { LayoutGrid, List, Plus } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 interface QuestionSetsListProps {
   isDarkMode: boolean;
@@ -18,8 +19,8 @@ export default function QuestionSetsList({ isDarkMode, onThemeToggle }: Question
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedClass, setSelectedClass] = useState('all');
-  const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-  const [sortBy, setSortBy] = useState('date');
+  const [selectedBook, setSelectedBook] = useState('all');
+  const [selectedChapter, setSelectedChapter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [questionSets, setQuestionSets] = useState<QuestionSet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,25 +71,21 @@ export default function QuestionSetsList({ isDarkMode, onThemeToggle }: Question
       const matchesClass = selectedClass === 'all' || 
         (set.class && set.class.toLowerCase() === selectedClass.toLowerCase());
       
-      // Filter by difficulty
-      const matchesDifficulty = selectedDifficulty === 'all' || 
-        (set.difficulty && set.difficulty.toLowerCase() === selectedDifficulty.toLowerCase());
+      // Filter by book
+      const matchesBook = selectedBook === 'all' || 
+        (set.book && set.book.toLowerCase() === selectedBook.toLowerCase());
       
-      return matchesSearch && matchesSubject && matchesClass && matchesDifficulty;
+      // Filter by chapter
+      const matchesChapter = selectedChapter === 'all' || 
+        (set.chapters && set.chapters.some(chapter => chapter.toLowerCase() === selectedChapter.toLowerCase()));
+      
+      return matchesSearch && matchesSubject && matchesClass && matchesBook && matchesChapter;
     })
     .sort((a, b) => {
-      // Sort by selected sort option
-      if (sortBy === 'date') {
-        // Handle cases where createdAt might be undefined or not a valid Date
-        const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : 0;
-        const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : 0;
-        return dateB - dateA;
-      } else if (sortBy === 'title') {
-        return (a.title || '').localeCompare(b.title || '');
-      } else if (sortBy === 'subject') {
-        return (a.subject || '').localeCompare(b.subject || '');
-      }
-      return 0;
+      // Sort by date (default sort)
+      const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : 0;
+      const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : 0;
+      return dateB - dateA;
     });
 
   // Convert question sets to the format expected by the components
@@ -97,6 +94,7 @@ export default function QuestionSetsList({ isDarkMode, onThemeToggle }: Question
     title: set.title || 'Untitled Question Set',
     subject: set.subject || 'No Subject',
     class: set.class || 'No Class',
+    book: set.book || '',
     difficulty: set.difficulty || 'medium',
     questionCount: set.questions?.length || 0,
     createdAt: set.createdAt instanceof Date ? set.createdAt.toLocaleDateString() : 'Unknown Date',
@@ -104,11 +102,21 @@ export default function QuestionSetsList({ isDarkMode, onThemeToggle }: Question
   }));
 
   // Handle edit, delete, and view actions
-  const handleDelete = (id: string) => {
-    // TODO: Implement delete functionality
-    console.log('Delete question set:', id);
-    // After confirmation, remove the set from state
-    setQuestionSets(prev => prev.filter(set => set.firebaseId !== id));
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this question set? This action cannot be undone.')) {
+      try {
+        setLoading(true);
+        await deleteQuestionSet(id);
+        toast.success('Question set deleted successfully');
+        // Remove the set from state
+        setQuestionSets(prev => prev.filter(set => set.firebaseId !== id));
+      } catch (error) {
+        console.error('Error deleting question set:', error);
+        toast.error('Failed to delete question set. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   const handleView = (id: string) => {
@@ -164,10 +172,10 @@ export default function QuestionSetsList({ isDarkMode, onThemeToggle }: Question
           onSubjectChange={setSelectedSubject}
           selectedClass={selectedClass}
           onClassChange={setSelectedClass}
-          selectedDifficulty={selectedDifficulty}
-          onDifficultyChange={setSelectedDifficulty}
-          sortBy={sortBy}
-          onSortChange={setSortBy}
+          selectedBook={selectedBook}
+          onBookChange={setSelectedBook}
+          selectedChapter={selectedChapter}
+          onChapterChange={setSelectedChapter}
         />
 
         {/* Content Section */}

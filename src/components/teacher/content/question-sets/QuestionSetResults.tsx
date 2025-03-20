@@ -34,6 +34,8 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
       // First, check if we have a questionSetId from props or URL params
       const firestoreQuestionSetId = questionSetId || urlQuestionSetId;
       
+      console.log('Loading question set with ID:', firestoreQuestionSetId);
+      
       if (firestoreQuestionSetId) {
         try {
           // Try to load the question set from Firestore
@@ -70,6 +72,34 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
               firebaseId: docSnap.id
             };
             
+            // Debug logging for questions and options
+            console.log('Loaded question set from Firestore:', loadedQuestionSet);
+            if (loadedQuestionSet.questions && loadedQuestionSet.questions.length > 0) {
+              loadedQuestionSet.questions.forEach((q, i) => {
+                console.log(`Question ${i+1} (${q.type}):`, q.question);
+                if (q.type === 'mcq') {
+                  console.log(`Options for Q${i+1}:`, q.options);
+                  console.log(`Options type:`, q.options ? typeof q.options : 'undefined');
+                  if (q.options && typeof q.options === 'string') {
+                    const optionsString = q.options as string;
+                    console.log(`Options string:`, optionsString);
+                    // Try to parse string options
+                    try {
+                      if (optionsString.trim().startsWith('[') && optionsString.trim().endsWith(']')) {
+                        q.options = JSON.parse(optionsString);
+                        console.log(`Parsed options:`, q.options);
+                      } else {
+                        q.options = optionsString.split(/[,\n]/).map((opt: string) => opt.trim()).filter((opt: string) => opt);
+                        console.log(`Split options:`, q.options);
+                      }
+                    } catch (e) {
+                      console.error(`Error parsing options:`, e);
+                    }
+                  }
+                }
+              });
+            }
+            
             setQuestionSet(loadedQuestionSet);
             setShowAnswers(loadedQuestionSet.includeAnswers);
             setDebugInfo(prev => `${prev}\nSuccessfully loaded question set from Firestore with ${loadedQuestionSet.questions?.length || 0} questions`);
@@ -102,11 +132,39 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
           setDebugInfo(prev => `${prev}\nRaw stored question set length: ${storedQuestionSet.length}`);
           
           const parsedQuestionSet = JSON.parse(storedQuestionSet);
-          console.log('Parsed question set:', parsedQuestionSet);
+          console.log('Parsed question set from localStorage:', parsedQuestionSet);
           
           // Convert string dates back to Date objects
           if (typeof parsedQuestionSet.createdAt === 'string') {
             parsedQuestionSet.createdAt = new Date(parsedQuestionSet.createdAt);
+          }
+          
+          // Debug logging for questions and options
+          if (parsedQuestionSet.questions && parsedQuestionSet.questions.length > 0) {
+            console.log(`Found ${parsedQuestionSet.questions.length} questions in localStorage`);
+            parsedQuestionSet.questions.forEach((q: any, i: number) => {
+              console.log(`Question ${i+1} (${q.type}):`, q.question);
+              if (q.type === 'mcq') {
+                console.log(`Options for Q${i+1}:`, q.options);
+                console.log(`Options type:`, q.options ? typeof q.options : 'undefined');
+                if (q.options && typeof q.options === 'string') {
+                  const optionsString = q.options as string;
+                  console.log(`Options string:`, optionsString);
+                  // Try to parse string options
+                  try {
+                    if (optionsString.trim().startsWith('[') && optionsString.trim().endsWith(']')) {
+                      q.options = JSON.parse(optionsString);
+                      console.log(`Parsed options:`, q.options);
+                    } else {
+                      q.options = optionsString.split(/[,\n]/).map((opt: string) => opt.trim()).filter((opt: string) => opt);
+                      console.log(`Split options:`, q.options);
+                    }
+                  } catch (e) {
+                    console.error(`Error parsing options:`, e);
+                  }
+                }
+              }
+            });
           }
           
           // Ensure questions array exists and has content
@@ -472,29 +530,70 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
               <ReactMarkdown>{question.question}</ReactMarkdown>
             </div>
             
-            {question.type === 'mcq' && question.options && (
+            {question.type === 'mcq' && (
               <div className="space-y-2 mb-4">
-                {question.options.map((option, optIndex) => (
-                  <div 
-                    key={optIndex} 
-                    className={`p-3 rounded-lg border ${
-                      showAnswers && question.answer === option
-                        ? 'bg-primary-400/10 dark:bg-primary-700/20 border-primary-400/30 dark:border-primary-700/50'
-                        : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-start">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-400/20 dark:bg-primary-700/30 text-primary-600 dark:text-white flex items-center justify-center mr-3">
-                        {String.fromCharCode(65 + optIndex)}
-                      </span>
-                      <span className="text-primary-600 dark:text-white">{option}</span>
-                    </div>
+                {/* Debug info for troubleshooting */}
+                {process.env.NODE_ENV !== 'production' && (
+                  <div className="text-xs text-gray-500 mb-2">
+                    Options type: {question.options ? (Array.isArray(question.options) ? 'array' : typeof question.options) : 'undefined'}
+                    {question.options && !Array.isArray(question.options) && ` (value: ${JSON.stringify(question.options)})`}
                   </div>
-                ))}
+                )}
+                
+                {/* Display MCQ options */}
+                {question.options && Array.isArray(question.options) && question.options.map((option, optIndex) => {
+                  // Handle different ways the correct answer might be specified
+                  const optionValue = typeof option === 'string' ? option : JSON.stringify(option);
+                  const answerValue = typeof question.answer === 'string' ? question.answer.trim() : '';
+                  
+                  // Check if this option is the correct answer in various formats
+                  const isCorrectAnswer = showAnswers && (
+                    // Exact match
+                    answerValue === optionValue ||
+                    // Option letter format (e.g., "A", "B", "C", "D")
+                    answerValue === String.fromCharCode(65 + optIndex) ||
+                    // Option letter with period (e.g., "A.", "B.", "C.", "D.")
+                    answerValue === `${String.fromCharCode(65 + optIndex)}.` ||
+                    // Option number (e.g., "1", "2", "3", "4")
+                    answerValue === String(optIndex + 1) ||
+                    // Answer contains the option text (only if option is reasonably long)
+                    (optionValue.length > 5 && answerValue.includes(optionValue)) ||
+                    // Option contains the answer (only if answer is reasonably long)
+                    (answerValue.length > 5 && optionValue.includes(answerValue))
+                  );
+                  
+                  return (
+                    <div 
+                      key={optIndex} 
+                      className={`p-3 rounded-lg border ${
+                        isCorrectAnswer
+                          ? 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700'
+                          : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-start">
+                        <span className={`flex-shrink-0 w-6 h-6 rounded-full ${isCorrectAnswer ? 'bg-green-400/50 dark:bg-green-700/50 text-green-800 dark:text-green-100' : 'bg-primary-400/20 dark:bg-primary-700/30 text-primary-600 dark:text-white'} flex items-center justify-center mr-3`}>
+                          {String.fromCharCode(65 + optIndex)}
+                        </span>
+                        <div className="flex-1">
+                          <span className={`${isCorrectAnswer ? 'font-medium text-green-800 dark:text-green-100' : 'text-primary-600 dark:text-white'}`}>
+                            {optionValue}
+                          </span>
+                          {isCorrectAnswer && (
+                            <div className="mt-1 text-sm text-green-700 dark:text-green-300">
+                              ✓ Correct Answer
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
             
-            {showAnswers && question.answer && (
+            {/* For non-MCQ questions, show answer separately */}
+            {showAnswers && question.answer && question.type !== 'mcq' && (
               <div className="mt-4 p-4 bg-primary-400/10 dark:bg-primary-700/20 rounded-lg border border-primary-400/30 dark:border-primary-700/50">
                 <h3 className="font-semibold text-primary-700 dark:text-white mb-2">Answer</h3>
                 <div className="text-primary-600 dark:text-white">
@@ -508,6 +607,68 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
                       <ReactMarkdown>{question.explanation}</ReactMarkdown>
                     </div>
                   </div>
+                )}
+              </div>
+            )}
+            
+            {/* For MCQ questions, show answer and explanation if present */}
+            {showAnswers && question.type === 'mcq' && (question.explanation || question.answer) && (
+              <div className="mt-4 p-4 bg-primary-400/10 dark:bg-primary-700/20 rounded-lg border border-primary-400/30 dark:border-primary-700/50">
+                {/* Always show the answer for MCQ questions */}
+                {question.answer && (
+                  <>
+                    <h3 className="font-semibold text-primary-700 dark:text-white mb-2">Answer</h3>
+                    <div className="text-primary-600 dark:text-white mb-3">
+                      <div className="flex items-center">
+                        {/* Try to determine which option is correct */}
+                        {(() => {
+                          // Check if answer is a letter (A, B, C, D)
+                          const answerStr = typeof question.answer === 'string' ? question.answer.trim() : '';
+                          let letterMatch = null;
+                          
+                          // Check for single letter answer
+                          if (/^[A-D]$/i.test(answerStr)) {
+                            letterMatch = answerStr.toUpperCase().charCodeAt(0) - 65;
+                          }
+                          // Check for letter with period
+                          else if (/^[A-D]\.$/.test(answerStr)) {
+                            letterMatch = answerStr.toUpperCase().charCodeAt(0) - 65;
+                          }
+                          // Check for numeric answer
+                          else if (/^[1-4]$/.test(answerStr)) {
+                            letterMatch = parseInt(answerStr) - 1;
+                          }
+                          
+                          if (letterMatch !== null && question.options && letterMatch < question.options.length) {
+                            // Show the letter and the corresponding option
+                            const letter = String.fromCharCode(65 + letterMatch);
+                            const option = question.options[letterMatch];
+                            return (
+                              <>
+                                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-400/50 dark:bg-green-700/50 text-green-800 dark:text-green-100 flex items-center justify-center mr-3">
+                                  {letter}
+                                </span>
+                                <span className="font-medium">{option}</span>
+                              </>
+                            );
+                          }
+                          
+                          // Default: just show the answer as is
+                          return <ReactMarkdown>{question.answer}</ReactMarkdown>;
+                        })()}
+                      </div>
+                    </div>
+                  </>
+                )}
+                
+                {/* Show explanation if present */}
+                {question.explanation && (
+                  <>
+                    <h3 className="font-semibold text-primary-700 dark:text-white mb-2">Explanation</h3>
+                    <div className="text-primary-600 dark:text-white">
+                      <ReactMarkdown>{question.explanation}</ReactMarkdown>
+                    </div>
+                  </>
                 )}
               </div>
             )}

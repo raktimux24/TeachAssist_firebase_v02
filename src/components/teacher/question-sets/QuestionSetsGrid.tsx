@@ -6,6 +6,7 @@ interface QuestionSet {
   title: string;
   subject: string;
   class: string;
+  book?: string;
   difficulty: string;
   questionCount: number;
   createdAt: string;
@@ -51,6 +52,9 @@ export default function QuestionSetsGrid({ sets, onDelete, onView }: QuestionSet
               <div className="flex items-center justify-between mb-1">
                 <span>{set.subject}</span>
                 <span>{set.class}</span>
+              </div>
+              <div className="flex items-center justify-between mb-1">
+                <span>{set.book || '-'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>{set.questionCount} questions</span>

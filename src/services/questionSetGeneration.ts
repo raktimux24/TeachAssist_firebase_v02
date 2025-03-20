@@ -15,6 +15,7 @@ export interface QuestionSet {
   title: string;
   subject: string;
   class: string;
+  book?: string; // Book property for filtering
   chapters: string[];
   difficulty: string;
   includeAnswers: boolean;
@@ -34,6 +35,7 @@ export interface QuestionSetGenerationOptions {
   questionTypes: Record<string, number>; // Type of question and count
   resources: Resource[];
   userId?: string; // Optional user ID for associating question sets with a user
+  book?: string; // Optional book property
 }
 
 // OpenAI API configuration - use environment variable
@@ -155,6 +157,7 @@ export const saveQuestionSetToFirestore = async (
       title: questionSet.title,
       subject: questionSet.subject,
       class: questionSet.class,
+      book: questionSet.book || '', // Add book field
       chapters: questionSet.chapters,
       difficulty: questionSet.difficulty,
       includeAnswers: questionSet.includeAnswers,
@@ -171,6 +174,7 @@ export const saveQuestionSetToFirestore = async (
       generationOptions: generationOptions ? {
         class: generationOptions.class,
         subject: generationOptions.subject,
+        book: generationOptions.book || '', // Add book to generation options
         chapters: generationOptions.chapters,
         difficulty: generationOptions.difficulty,
         includeAnswers: generationOptions.includeAnswers,
@@ -262,6 +266,7 @@ export const getUserQuestionSets = async (userId: string): Promise<QuestionSet[]
         title: data.title || '',
         subject: data.subject || '',
         class: data.class || '',
+        book: data.book || '', // Add book field when retrieving
         chapters: data.chapters || [],
         difficulty: data.difficulty || 'medium',
         includeAnswers: data.includeAnswers !== undefined ? data.includeAnswers : true,
@@ -414,6 +419,7 @@ const parseOpenAIResponse = (content: string, options: QuestionSetGenerationOpti
       title: parsedResponse.title || `${options.subject} Question Set: ${options.chapters.join(', ')}`,
       subject: parsedResponse.subject || options.subject,
       class: parsedResponse.class || options.class,
+      book: parsedResponse.book || options.book || '', // Add book field
       chapters: parsedResponse.chapters || options.chapters,
       difficulty: parsedResponse.difficulty || options.difficulty,
       includeAnswers: parsedResponse.includeAnswers !== undefined ? parsedResponse.includeAnswers : options.includeAnswers,
@@ -461,6 +467,7 @@ const createDefaultQuestionSet = (options: QuestionSetGenerationOptions): Questi
     title: `${options.subject} Question Set: ${options.chapters.join(', ')}`,
     subject: options.subject,
     class: options.class,
+    book: options.book || '', // Add book field to default question set
     chapters: options.chapters,
     difficulty: options.difficulty,
     includeAnswers: options.includeAnswers,

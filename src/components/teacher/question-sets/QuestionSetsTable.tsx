@@ -6,6 +6,7 @@ interface QuestionSet {
   title: string;
   subject: string;
   class: string;
+  book?: string;
   difficulty: string;
   questionCount: number;
   createdAt: string;
@@ -34,6 +35,9 @@ export default function QuestionSetsTable({ sets, onDelete, onView }: QuestionSe
               Class
             </th>
             <th scope="col" className="px-2 sm:px-3 py-2.5 sm:py-3.5 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
+              Book
+            </th>
+            <th scope="col" className="px-2 sm:px-3 py-2.5 sm:py-3.5 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
               Difficulty
             </th>
             <th scope="col" className="px-2 sm:px-3 py-2.5 sm:py-3.5 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
@@ -58,6 +62,9 @@ export default function QuestionSetsTable({ sets, onDelete, onView }: QuestionSe
               </td>
               <td className="whitespace-nowrap px-2 sm:px-3 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                 {set.class}
+              </td>
+              <td className="whitespace-nowrap px-2 sm:px-3 py-3 sm:py-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                {set.book || '-'}
               </td>
               <td className="whitespace-nowrap px-2 sm:px-3 py-3 sm:py-4 text-xs sm:text-sm">
                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 

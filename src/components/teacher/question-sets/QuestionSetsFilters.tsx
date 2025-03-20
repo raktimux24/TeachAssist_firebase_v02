@@ -1,27 +1,21 @@
-import React from 'react';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { fetchClasses, fetchSubjects, fetchBooks, fetchChapters } from '../../../firebase/resources';
 
 interface QuestionSetsFiltersProps {
   searchQuery: string;
-  onSearchChange: (value: string) => void;
+  onSearchChange: (query: string) => void;
   selectedSubject: string;
-  onSubjectChange: (value: string) => void;
+  onSubjectChange: (subject: string) => void;
   selectedClass: string;
-  onClassChange: (value: string) => void;
-  selectedDifficulty: string;
-  onDifficultyChange: (value: string) => void;
-  sortBy: string;
-  onSortChange: (value: string) => void;
+  onClassChange: (classValue: string) => void;
+  selectedBook: string;
+  onBookChange: (book: string) => void;
+  selectedChapter: string;
+  onChapterChange: (chapter: string) => void;
 }
 
-const subjects = ['all', 'Mathematics', 'Science', 'English', 'History', 'Geography', 'Physics', 'Chemistry', 'Biology'];
-const classes = ['all', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12'];
-const difficulties = ['all', 'easy', 'medium', 'hard'];
-const sortOptions = [
-  { value: 'date', label: 'Date Created' },
-  { value: 'title', label: 'Title' },
-  { value: 'subject', label: 'Subject' }
-];
+
 
 export default function QuestionSetsFilters({
   searchQuery,
@@ -30,18 +24,110 @@ export default function QuestionSetsFilters({
   onSubjectChange,
   selectedClass,
   onClassChange,
-  selectedDifficulty,
-  onDifficultyChange,
-  sortBy,
-  onSortChange
+  selectedBook,
+  onBookChange,
+  selectedChapter,
+  onChapterChange
 }: QuestionSetsFiltersProps) {
-  const [showFilters, setShowFilters] = React.useState(false);
+  const [classes, setClasses] = useState<string[]>(['all']);
+  const [subjects, setSubjects] = useState<string[]>(['all']);
+  const [books, setBooks] = useState<string[]>(['all']);
+  const [chapters, setChapters] = useState<string[]>(['all']);
+  const [loading, setLoading] = useState({
+    classes: false,
+    subjects: false,
+    books: false,
+    chapters: false
+  });
+
+  // Fetch classes on component mount
+  useEffect(() => {
+    const getClasses = async () => {
+      setLoading(prev => ({ ...prev, classes: true }));
+      try {
+        const fetchedClasses = await fetchClasses();
+        setClasses(['all', ...fetchedClasses]);
+      } catch (error) {
+        console.error('Error fetching classes:', error);
+      } finally {
+        setLoading(prev => ({ ...prev, classes: false }));
+      }
+    };
+
+    getClasses();
+  }, []);
+
+  // Fetch subjects when a class is selected
+  useEffect(() => {
+    if (selectedClass === 'all') {
+      setSubjects(['all']);
+      return;
+    }
+
+    const getSubjects = async () => {
+      setLoading(prev => ({ ...prev, subjects: true }));
+      try {
+        const fetchedSubjects = await fetchSubjects(selectedClass);
+        setSubjects(['all', ...fetchedSubjects]);
+      } catch (error) {
+        console.error('Error fetching subjects:', error);
+      } finally {
+        setLoading(prev => ({ ...prev, subjects: false }));
+      }
+    };
+
+    getSubjects();
+  }, [selectedClass]);
+
+  // Fetch books when a subject is selected
+  useEffect(() => {
+    if (selectedClass === 'all' || selectedSubject === 'all') {
+      setBooks(['all']);
+      return;
+    }
+
+    const getBooks = async () => {
+      setLoading(prev => ({ ...prev, books: true }));
+      try {
+        const fetchedBooks = await fetchBooks(selectedClass, selectedSubject);
+        setBooks(['all', ...fetchedBooks]);
+      } catch (error) {
+        console.error('Error fetching books:', error);
+      } finally {
+        setLoading(prev => ({ ...prev, books: false }));
+      }
+    };
+
+    getBooks();
+  }, [selectedClass, selectedSubject]);
+
+  // Fetch chapters when a book is selected
+  useEffect(() => {
+    if (selectedClass === 'all' || selectedSubject === 'all' || selectedBook === 'all') {
+      setChapters(['all']);
+      return;
+    }
+
+    const getChapters = async () => {
+      setLoading(prev => ({ ...prev, chapters: true }));
+      try {
+        const fetchedChapters = await fetchChapters(selectedClass, selectedSubject, selectedBook);
+        setChapters(['all', ...fetchedChapters]);
+      } catch (error) {
+        console.error('Error fetching chapters:', error);
+      } finally {
+        setLoading(prev => ({ ...prev, chapters: false }));
+      }
+    };
+
+    getChapters();
+  }, [selectedClass, selectedSubject, selectedBook]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-3 sm:p-4">
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-        {/* Search Bar */}
-        <div className="relative flex-grow">
+    <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-black ring-opacity-5 rounded-lg p-4 sm:p-6">
+      <div className="space-y-4">
+        {/* Search */}
+        <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
           </div>
@@ -49,99 +135,99 @@ export default function QuestionSetsFilters({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="block w-full pl-8 sm:pl-10 pr-2 sm:pr-3 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-xs sm:text-sm"
+            className="block w-full pl-9 sm:pl-10 pr-3 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             placeholder="Search question sets..."
           />
         </div>
 
-        {/* Filter Toggle Button */}
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-xs sm:text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-        >
-          <SlidersHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-          Filters
-        </button>
-
-        {/* Sort Dropdown */}
-        <div className="flex-shrink-0">
-          <label htmlFor="sort-by" className="sr-only">Sort by</label>
-          <select
-            id="sort-by"
-            value={sortBy}
-            onChange={(e) => onSortChange(e.target.value)}
-            className="block w-full pl-2 sm:pl-3 pr-8 sm:pr-10 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            {sortOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Expanded Filters */}
-      {showFilters && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
+        {/* Filters */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+          
+          {/* Class Filter */}
+          <div>
+            <label htmlFor="class-filter" className="sr-only">Class</label>
+            <select
+              id="class-filter"
+              value={selectedClass}
+              onChange={(e) => onClassChange(e.target.value)}
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              disabled={loading.classes}
+            >
+              {loading.classes ? (
+                <option value="loading">Loading...</option>
+              ) : classes.map((classLevel) => (
+                <option key={classLevel} value={classLevel}>
+                  {classLevel === 'all' ? 'All Classes' : classLevel}
+                </option>
+              ))}
+            </select>
+          </div>
+          
           {/* Subject Filter */}
           <div>
-            <label htmlFor="subject-filter" className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Subject
-            </label>
+            <label htmlFor="subject-filter" className="sr-only">Subject</label>
             <select
               id="subject-filter"
               value={selectedSubject}
               onChange={(e) => onSubjectChange(e.target.value)}
-              className="block w-full pl-2 sm:pl-3 pr-8 sm:pr-10 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              disabled={loading.subjects || selectedClass === 'all'}
             >
-              {subjects.map((subject) => (
+              {loading.subjects ? (
+                <option value="loading">Loading...</option>
+              ) : subjects.map((subject) => (
                 <option key={subject} value={subject}>
                   {subject === 'all' ? 'All Subjects' : subject}
                 </option>
               ))}
             </select>
           </div>
-
-          {/* Class Filter */}
+          
+          {/* Book Filter */}
           <div>
-            <label htmlFor="class-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Class
-            </label>
+            <label htmlFor="book-filter" className="sr-only">Book</label>
             <select
-              id="class-filter"
-              value={selectedClass}
-              onChange={(e) => onClassChange(e.target.value)}
-              className="block w-full pl-2 sm:pl-3 pr-8 sm:pr-10 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              id="book-filter"
+              value={selectedBook}
+              onChange={(e) => onBookChange(e.target.value)}
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              disabled={loading.books || selectedClass === 'all' || selectedSubject === 'all'}
             >
-              {classes.map((classOption) => (
-                <option key={classOption} value={classOption}>
-                  {classOption === 'all' ? 'All Classes' : classOption}
+              {loading.books ? (
+                <option value="loading">Loading...</option>
+              ) : books.map((book) => (
+                <option key={book} value={book}>
+                  {book === 'all' ? 'All Books' : book}
                 </option>
               ))}
             </select>
           </div>
-
-          {/* Difficulty Filter */}
+          
+          {/* Chapter Filter */}
           <div>
-            <label htmlFor="difficulty-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Difficulty
-            </label>
+            <label htmlFor="chapter-filter" className="sr-only">Chapter</label>
             <select
-              id="difficulty-filter"
-              value={selectedDifficulty}
-              onChange={(e) => onDifficultyChange(e.target.value)}
-              className="block w-full pl-2 sm:pl-3 pr-8 sm:pr-10 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              id="chapter-filter"
+              value={selectedChapter}
+              onChange={(e) => onChapterChange(e.target.value)}
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              disabled={loading.chapters || selectedClass === 'all' || selectedSubject === 'all' || selectedBook === 'all'}
             >
-              {difficulties.map((difficulty) => (
-                <option key={difficulty} value={difficulty}>
-                  {difficulty === 'all' ? 'All Difficulties' : difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+              {loading.chapters ? (
+                <option value="loading">Loading...</option>
+              ) : chapters.map((chapter) => (
+                <option key={chapter} value={chapter}>
+                  {chapter === 'all' ? 'All Chapters' : chapter}
                 </option>
               ))}
             </select>
           </div>
+          
+
         </div>
-      )}
+        
+
+      </div>
     </div>
   );
 }
