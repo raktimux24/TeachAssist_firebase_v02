@@ -227,8 +227,18 @@ export default function FlashcardsGenerator({}: FlashcardsGeneratorProps) {
   };
   
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="space-y-8">
+    <div className="w-full max-w-4xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          Generate Flashcards
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          Configure your preferences to generate customized flashcards
+        </p>
+      </div>
+      
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+        <div className="p-6 space-y-6">
         {/* Basic Settings */}
         <BasicSettings
           selectedClass={selectedClass}
@@ -288,6 +298,7 @@ export default function FlashcardsGenerator({}: FlashcardsGeneratorProps) {
         {localError.generating && (
           <div className="mt-4 text-red-600">{localError.generating}</div>
         )}
+        </div>
       </div>
     </div>
   );

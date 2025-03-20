@@ -4,6 +4,7 @@ import TeacherLayout from '../../components/teacher/TeacherLayout';
 import { getUserFlashcardSets, deleteFlashcardSet } from '../../firebase/flashcards';
 import { useAuth } from '../../contexts/AuthContext';
 import { LayoutGrid, List, Plus, Eye, Trash2 } from 'lucide-react';
+import FlashcardFilters from '../../components/teacher/flashcards/FlashcardFilters';
 
 interface FlashcardsListProps {
   isDarkMode: boolean;
@@ -15,16 +16,20 @@ interface FlashcardItem {
   title: string;
   subject: string;
   class: string;
+  book: string;
   type: string;
   cardCount: number;
   createdAt: string;
   tags: string[];
+  chapters: string[];
 }
 
 export default function FlashcardsList({ isDarkMode, onThemeToggle }: FlashcardsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedClass, setSelectedClass] = useState('all');
+  const [selectedBook, setSelectedBook] = useState('all');
+  const [selectedChapter, setSelectedChapter] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
@@ -78,13 +83,23 @@ export default function FlashcardsList({ isDarkMode, onThemeToggle }: Flashcards
       const matchesClass = selectedClass === 'all' || 
         (set.class && set.class.toLowerCase() === selectedClass.toLowerCase());
       
+      // Filter by book
+      const matchesBook = selectedBook === 'all' || 
+        (set.book && set.book === selectedBook) ||
+        (set.generationOptions?.book && set.generationOptions.book === selectedBook);
+      
+      // Filter by chapter
+      const matchesChapter = selectedChapter === 'all' || 
+        (set.generationOptions?.chapters && Array.isArray(set.generationOptions.chapters) && 
+         set.generationOptions.chapters.includes(selectedChapter));
+      
       // Filter by flashcard type
       const matchesType = selectedType === 'all' || 
         (set.type && set.type.toLowerCase() === selectedType.toLowerCase()) ||
         (set.generationOptions?.flashcardType && 
          set.generationOptions.flashcardType.toLowerCase() === selectedType.toLowerCase());
       
-      return matchesSearch && matchesSubject && matchesClass && matchesType;
+      return matchesSearch && matchesSubject && matchesClass && matchesBook && matchesChapter && matchesType;
     })
     .sort((a, b) => {
       // Sort by selected sort option
@@ -104,18 +119,25 @@ export default function FlashcardsList({ isDarkMode, onThemeToggle }: Flashcards
     });
 
   // Convert flashcards to the format expected by the components
-  const formattedFlashcards: FlashcardItem[] = filteredAndSortedFlashcards.map(set => ({
-    id: set.id || '',
-    title: set.title || 'Untitled Flashcard Set',
-    subject: set.subject || 'No Subject',
-    class: set.class || 'No Class',
-    type: set.type || set.generationOptions?.flashcardType || 'Standard',
-    cardCount: set.cards?.length || 0,
-    createdAt: set.createdAt instanceof Date 
-      ? set.createdAt.toLocaleDateString() 
-      : (set.createdAt?.toDate ? set.createdAt.toDate().toLocaleDateString() : 'Unknown Date'),
-    tags: Array.isArray(set.generationOptions?.chapters) ? set.generationOptions.chapters : []
-  }));
+  const formattedFlashcards: FlashcardItem[] = filteredAndSortedFlashcards.map(set => {
+    // Extract book name from the set or generationOptions
+    const bookName = set.book || set.generationOptions?.book || 'No Book';
+    
+    return {
+      id: set.id || '',
+      title: set.title || 'Untitled Flashcard Set',
+      subject: set.subject || 'No Subject',
+      class: set.class || 'No Class',
+      book: bookName,
+      type: set.type || set.generationOptions?.flashcardType || 'Standard',
+      cardCount: set.cards?.length || 0,
+      createdAt: set.createdAt instanceof Date 
+        ? set.createdAt.toLocaleDateString() 
+        : (set.createdAt?.toDate ? set.createdAt.toDate().toLocaleDateString() : 'Unknown Date'),
+      tags: Array.isArray(set.generationOptions?.chapters) ? set.generationOptions.chapters : [],
+      chapters: Array.isArray(set.generationOptions?.chapters) ? set.generationOptions.chapters : []
+    };
+  });
 
   // Handle view action
   const handleView = (id: string) => {
@@ -189,100 +211,22 @@ export default function FlashcardsList({ isDarkMode, onThemeToggle }: Flashcards
         </div>
 
         {/* Filters Section */}
-        <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-lg p-3 sm:p-4 md:p-6 overflow-hidden">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-            {/* Search */}
-            <div className="col-span-1 sm:col-span-2 lg:col-span-2">
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Search
-              </label>
-              <input
-                type="text"
-                id="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by title, subject, or class..."
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6 dark:bg-gray-700 dark:ring-gray-600 dark:text-white dark:placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Subject Filter */}
-            <div>
-              <label htmlFor="subject" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Subject
-              </label>
-              <select
-                id="subject"
-                value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6 dark:bg-gray-700 dark:ring-gray-600 dark:text-white"
-              >
-                <option value="all">All Subjects</option>
-                {/* Extract unique subjects from flashcards */}
-                {Array.from(new Set(flashcards.map(set => set.subject).filter(Boolean))).map(subject => (
-                  <option key={subject} value={subject}>{subject}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Class Filter */}
-            <div>
-              <label htmlFor="class" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Class
-              </label>
-              <select
-                id="class"
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6 dark:bg-gray-700 dark:ring-gray-600 dark:text-white"
-              >
-                <option value="all">All Classes</option>
-                {/* Extract unique classes from flashcards */}
-                {Array.from(new Set(flashcards.map(set => set.class).filter(Boolean))).map(className => (
-                  <option key={className} value={className}>{className}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Type Filter */}
-            <div>
-              <label htmlFor="type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Type
-              </label>
-              <select
-                id="type"
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6 dark:bg-gray-700 dark:ring-gray-600 dark:text-white"
-              >
-                <option value="all">All Types</option>
-                {/* Extract unique types from flashcards */}
-                {Array.from(new Set(flashcards.map(set => 
-                  set.type || set.generationOptions?.flashcardType
-                ).filter(Boolean))).map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Sort By */}
-            <div>
-              <label htmlFor="sortBy" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Sort By
-              </label>
-              <select
-                id="sortBy"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6 dark:bg-gray-700 dark:ring-gray-600 dark:text-white"
-              >
-                <option value="date">Date Created</option>
-                <option value="title">Title</option>
-                <option value="subject">Subject</option>
-              </select>
-            </div>
-          </div>
-        </div>
+        <FlashcardFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          selectedSubject={selectedSubject}
+          onSubjectChange={setSelectedSubject}
+          selectedClass={selectedClass}
+          onClassChange={setSelectedClass}
+          selectedBook={selectedBook}
+          onBookChange={setSelectedBook}
+          selectedChapter={selectedChapter}
+          onChapterChange={setSelectedChapter}
+          selectedType={selectedType}
+          onTypeChange={setSelectedType}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+        />
 
         {/* Content Section */}
         <div className="min-h-[300px] w-full">
@@ -333,6 +277,9 @@ export default function FlashcardsList({ isDarkMode, onThemeToggle }: Flashcards
                         Class
                       </th>
                       <th scope="col" className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Book
+                      </th>
+                      <th scope="col" className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         Type
                       </th>
                       <th scope="col" className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -357,6 +304,9 @@ export default function FlashcardsList({ isDarkMode, onThemeToggle }: Flashcards
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-500 dark:text-gray-400">{flashcard.class}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{flashcard.book}</div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-500 dark:text-gray-400">{flashcard.type}</div>
@@ -412,6 +362,9 @@ export default function FlashcardsList({ isDarkMode, onThemeToggle }: Flashcards
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         <span className="font-medium">Class:</span> {flashcard.class}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-medium">Book:</span> {flashcard.book}
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         <span className="font-medium">Type:</span> {flashcard.type}

@@ -2,28 +2,24 @@ import { Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { fetchClasses, fetchSubjects, fetchBooks, fetchChapters } from '../../../firebase/resources';
 
-interface LessonPlansFiltersProps {
+interface FlashcardFiltersProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   selectedSubject: string;
   onSubjectChange: (subject: string) => void;
   selectedClass: string;
-  onClassChange: (classLevel: string) => void;
+  onClassChange: (classValue: string) => void;
   selectedBook: string;
   onBookChange: (book: string) => void;
   selectedChapter: string;
   onChapterChange: (chapter: string) => void;
+  selectedType: string; // Kept for compatibility with parent component
+  onTypeChange: (type: string) => void; // Kept for compatibility with parent component
   sortBy: string;
-  onSortChange: (sort: string) => void;
+  onSortChange: (sortBy: string) => void;
 }
 
-const sortOptions = [
-  { value: 'date', label: 'Date Created' },
-  { value: 'title', label: 'Title' },
-  { value: 'subject', label: 'Subject' },
-];
-
-export default function LessonPlansFilters({
+export default function FlashcardFilters({
   searchQuery,
   onSearchChange,
   selectedSubject,
@@ -34,9 +30,11 @@ export default function LessonPlansFilters({
   onBookChange,
   selectedChapter,
   onChapterChange,
+  // selectedType and onTypeChange are still received but not used
+  // as the Type filter has been removed per user request
   sortBy,
-  onSortChange,
-}: LessonPlansFiltersProps) {
+  onSortChange
+}: FlashcardFiltersProps) {
   const [classes, setClasses] = useState<string[]>(['all']);
   const [subjects, setSubjects] = useState<string[]>(['all']);
   const [books, setBooks] = useState<string[]>(['all']);
@@ -119,7 +117,7 @@ export default function LessonPlansFilters({
     const getChapters = async () => {
       setLoading(prev => ({ ...prev, chapters: true }));
       try {
-        const fetchedChapters = await fetchChapters(selectedClass, selectedSubject);
+        const fetchedChapters = await fetchChapters(selectedClass, selectedSubject, selectedBook);
         setChapters(['all', ...fetchedChapters]);
       } catch (error) {
         console.error('Error fetching chapters:', error);
@@ -130,10 +128,11 @@ export default function LessonPlansFilters({
 
     getChapters();
   }, [selectedClass, selectedSubject, selectedBook]);
+
   return (
-    <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow-sm ring-1 ring-gray-900/5 w-full overflow-hidden">
-      <div className="grid gap-3 sm:gap-4 w-full">
-        {/* Search Input */}
+    <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-black ring-opacity-5 rounded-lg p-4 sm:p-6">
+      <div className="space-y-4">
+        {/* Search */}
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
@@ -143,11 +142,13 @@ export default function LessonPlansFilters({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="block w-full pl-9 sm:pl-10 pr-3 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            placeholder="Search lesson plans..."
+            placeholder="Search flashcards..."
           />
         </div>
 
-        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3 w-full">
+        {/* Filters */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4">
+          
           {/* Class Filter */}
           <div>
             <label htmlFor="class-filter" className="sr-only">Class</label>
@@ -155,7 +156,7 @@ export default function LessonPlansFilters({
               id="class-filter"
               value={selectedClass}
               onChange={(e) => onClassChange(e.target.value)}
-              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 truncate"
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               disabled={loading.classes}
             >
               {loading.classes ? (
@@ -167,7 +168,7 @@ export default function LessonPlansFilters({
               ))}
             </select>
           </div>
-
+          
           {/* Subject Filter */}
           <div>
             <label htmlFor="subject-filter" className="sr-only">Subject</label>
@@ -175,7 +176,7 @@ export default function LessonPlansFilters({
               id="subject-filter"
               value={selectedSubject}
               onChange={(e) => onSubjectChange(e.target.value)}
-              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 truncate"
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               disabled={loading.subjects || selectedClass === 'all'}
             >
               {loading.subjects ? (
@@ -187,7 +188,7 @@ export default function LessonPlansFilters({
               ))}
             </select>
           </div>
-
+          
           {/* Book Filter */}
           <div>
             <label htmlFor="book-filter" className="sr-only">Book</label>
@@ -195,7 +196,7 @@ export default function LessonPlansFilters({
               id="book-filter"
               value={selectedBook}
               onChange={(e) => onBookChange(e.target.value)}
-              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 truncate"
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               disabled={loading.books || selectedClass === 'all' || selectedSubject === 'all'}
             >
               {loading.books ? (
@@ -207,7 +208,7 @@ export default function LessonPlansFilters({
               ))}
             </select>
           </div>
-
+          
           {/* Chapter Filter */}
           <div>
             <label htmlFor="chapter-filter" className="sr-only">Chapter</label>
@@ -215,7 +216,7 @@ export default function LessonPlansFilters({
               id="chapter-filter"
               value={selectedChapter}
               onChange={(e) => onChapterChange(e.target.value)}
-              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 truncate"
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               disabled={loading.chapters || selectedClass === 'all' || selectedSubject === 'all' || selectedBook === 'all'}
             >
               {loading.chapters ? (
@@ -227,21 +228,19 @@ export default function LessonPlansFilters({
               ))}
             </select>
           </div>
-
+          
           {/* Sort By */}
           <div>
-            <label htmlFor="sort-filter" className="sr-only">Sort by</label>
+            <label htmlFor="sort-filter" className="sr-only">Sort By</label>
             <select
               id="sort-filter"
               value={sortBy}
               onChange={(e) => onSortChange(e.target.value)}
-              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 truncate"
+              className="block w-full pl-2 sm:pl-3 pr-6 sm:pr-8 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
-              {sortOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  Sort by {option.label}
-                </option>
-              ))}
+              <option value="date">Date (Newest)</option>
+              <option value="title">Title (A-Z)</option>
+              <option value="subject">Subject (A-Z)</option>
             </select>
           </div>
         </div>
