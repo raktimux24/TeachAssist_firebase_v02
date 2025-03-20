@@ -1,7 +1,7 @@
 import { db } from '../firebase/config';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Presentation } from './presentationService';
-import { updateContentStats } from '../services/contentStatsService';
+import { updateContentStats } from './contentStatsService';
 
 // Extended Presentation interface with Firebase-specific fields
 export interface FirebasePresentation extends Presentation {
