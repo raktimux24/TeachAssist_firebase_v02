@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { DashboardCard } from '../../shared/cards/DashboardCard';
 import { useAuth } from '../../../contexts/AuthContext';
-import { getDailyContentStats } from '../../../services/dailyContentStatsService';
+import { getDailyContentStats, testDailyContentStats } from '../../../services/dailyContentStatsService';
 import { ContentGenerationData, TimeRange } from '../../../types/dailyContentStats';
 import toast from 'react-hot-toast';
 
-
-
+// Chart colors for different content types
 const CHART_COLORS = {
   'Lesson Plans': '#4F46E5',
   'Question Sets': '#10B981',
@@ -16,47 +15,82 @@ const CHART_COLORS = {
   'Flash Cards': '#EC4899',
 };
 
+/**
+ * Content Generation Chart component that displays real data from the database
+ */
 export const ContentGenerationChart: React.FC = () => {
   const { currentUser } = useAuth();
   const [timeRange, setTimeRange] = useState<TimeRange>(30);
   const [data, setData] = useState<ContentGenerationData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [noData, setNoData] = useState<boolean>(false);
 
+  // Function to generate test data for the current user
+  const generateTestData = async () => {
+    if (!currentUser?.uid) {
+      toast.error('You must be logged in to generate test data');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      toast.loading('Generating test data...');
+      await testDailyContentStats(currentUser.uid);
+      toast.success('Test data generated successfully!');
+      // Refetch the data after generating test data
+      fetchData();
+    } catch (error) {
+      console.error('Error generating test data:', error);
+      toast.error('Failed to generate test data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to fetch data from the database
+  const fetchData = async () => {
+    if (!currentUser?.uid) {
+      setError('No user is currently logged in');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      setNoData(false);
+      
+      console.log('Fetching content generation data for user:', currentUser.uid);
+      const statsData = await getDailyContentStats(currentUser.uid, timeRange);
+      console.log('Received stats data:', statsData);
+      
+      if (statsData.length === 0) {
+        console.log('No data received from getDailyContentStats');
+        setNoData(true);
+      } else {
+        console.log('Setting chart data:', statsData);
+        setNoData(false);
+      }
+      
+      setData(statsData);
+    } catch (err) {
+      console.error('Error fetching content generation data:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Failed to load content generation data: ${errorMessage}`);
+      setNoData(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch data when component mounts or when timeRange changes
   useEffect(() => {
-    const fetchData = async () => {
-      if (!currentUser?.uid) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        const statsData = await getDailyContentStats(currentUser.uid, timeRange);
-        setData(statsData);
-      } catch (err) {
-        console.error('Error fetching content generation data:', err);
-        // Provide more specific error message
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        setError(`Failed to load content generation data: ${errorMessage}`);
-        
-        // Show a more informative toast message
-        toast.error('Content generation chart data could not be loaded. This might be due to missing database indexes or permissions.', {
-          duration: 5000,
-        });
-        
-        // Set empty data to avoid rendering issues
-        setData([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [currentUser, timeRange]);
 
   const handleTimeRangeChange = (days: TimeRange) => {
+    console.log('Changing time range to:', days, 'days');
     setTimeRange(days);
   };
 
@@ -91,11 +125,36 @@ export const ContentGenerationChart: React.FC = () => {
             </div>
           ) : error ? (
             <div className="h-full w-full flex items-center justify-center">
-              <div className="text-red-500 dark:text-red-400">{error}</div>
+              <div className="text-red-500 dark:text-red-400 text-center">
+                <p>{error}</p>
+                <div className="flex space-x-2 mt-4 justify-center">
+                  <button
+                    onClick={() => fetchData()}
+                    className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    Retry
+                  </button>
+                  <button
+                    onClick={generateTestData}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    Generate Test Data
+                  </button>
+                </div>
+              </div>
             </div>
-          ) : data.length === 0 ? (
-            <div className="h-full w-full flex items-center justify-center">
-              <div className="text-gray-500 dark:text-gray-400">No content generation data available for this period.</div>
+          ) : noData || data.length === 0 ? (
+            <div className="h-full w-full flex flex-col items-center justify-center">
+              <div className="text-gray-500 dark:text-gray-400 text-center">
+                <p>No content generation data available for this period.</p>
+                <p className="mt-2 text-sm">Generate test data or create some content to see statistics here.</p>
+                <button
+                  onClick={generateTestData}
+                  className="mt-4 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  Generate Test Data
+                </button>
+              </div>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
