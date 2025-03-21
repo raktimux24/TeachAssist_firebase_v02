@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TeacherLayout from '../../../components/teacher/TeacherLayout';
 import AdminLayout from '../../../components/admin/AdminLayout';
 import UploadForm from './components/UploadForm';
 import MetadataForm from './components/MetadataForm';
-import ResourcesList from './components/ResourcesList';
 import { useAuth } from '../../../contexts/AuthContext';
 import { uploadFile, createResource } from '../../../firebase/resources';
 import toast from 'react-hot-toast';
@@ -104,25 +103,17 @@ export default function UploadResources({ isDarkMode, onThemeToggle, isAdmin = f
             </p>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* Upload and Metadata Forms */}
-            <div className="lg:col-span-2 space-y-6">
-              <UploadForm
-                onFileUpload={handleFileSelect}
-                onFileRemove={handleFileRemove}
-                disabled={isUploading}
-                uploadProgress={uploadProgress}
-              />
-              <MetadataForm
-                onSubmit={handleSubmit}
-                disabled={!selectedFile || isUploading}
-              />
-            </div>
-
-            {/* Resources List */}
-            <div className="xl:col-span-1">
-              <ResourcesList isAdmin={isAdmin} />
-            </div>
+          <div className="max-w-3xl mx-auto space-y-6">
+            <UploadForm
+              onFileUpload={handleFileSelect}
+              onFileRemove={handleFileRemove}
+              disabled={isUploading}
+              uploadProgress={uploadProgress}
+            />
+            <MetadataForm
+              onSubmit={handleSubmit}
+              disabled={!selectedFile || isUploading}
+            />
           </div>
         </div>
       </div>
