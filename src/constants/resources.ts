@@ -12,7 +12,8 @@ export const AVAILABLE_SUBJECTS = [
   'Chemistry',
   'Biology',
   'History',
-  'Geography'
+  'Geography',
+  'Political Science'
 ];
 
 export const AVAILABLE_CHAPTERS = [

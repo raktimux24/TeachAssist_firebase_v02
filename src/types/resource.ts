@@ -63,5 +63,6 @@ export const AVAILABLE_SUBJECTS = [
   'Economics',
   'Sociology',
   'Psychology',
-  'Computer Science'
+  'Computer Science',
+  'Political Science'
 ] as const; 
