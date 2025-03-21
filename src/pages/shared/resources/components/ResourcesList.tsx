@@ -1,4 +1,4 @@
-import React from 'react';
+// React import removed as it's not needed with modern JSX transform
 import { FileText, Download, Pencil, Trash2, Eye } from 'lucide-react';
 
 interface Resource {
@@ -74,20 +74,7 @@ export default function ResourcesList({ isAdmin = false }: ResourcesListProps) {
                   Uploaded {resource.uploadedAt}
                 </p>
               </div>
-              {(resource.class || resource.subject) && (
-                <div className="mt-1 flex space-x-2">
-                  {resource.class && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200">
-                      {resource.class}
-                    </span>
-                  )}
-                  {resource.subject && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200">
-                      {resource.subject}
-                    </span>
-                  )}
-                </div>
-              )}
+              {/* Class and subject tags removed as requested */}
             </div>
 
             <div className="flex-shrink-0 flex space-x-2 mt-3 sm:mt-0">
