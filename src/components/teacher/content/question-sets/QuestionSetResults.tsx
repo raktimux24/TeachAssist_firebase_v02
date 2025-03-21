@@ -38,16 +38,59 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
         try {
           // Try to load the question set from Firestore
           setDebugInfo(`Attempting to load question set from Firestore with ID: ${firestoreQuestionSetId}`);
-          const docRef = doc(db, 'questionsets', firestoreQuestionSetId);
-          const docSnap = await getDoc(docRef);
           
-          if (docSnap.exists()) {
+          // Try different collection names for backward compatibility
+          const collectionNames = ['questionsets', 'questionSet', 'questionset'];
+          let docSnap = null;
+          
+          // Try each collection
+          for (const collName of collectionNames) {
+            try {
+              console.log(`Trying to load from collection '${collName}'`);
+              const docRef = doc(db, collName, firestoreQuestionSetId);
+              const snapshot = await getDoc(docRef);
+              
+              if (snapshot.exists()) {
+                docSnap = snapshot;
+                console.log(`Found question set in collection '${collName}'`);
+                setDebugInfo(prev => `${prev}\nFound question set in collection '${collName}'`);
+                break;
+              }
+            } catch (collError) {
+              console.warn(`Error loading from collection '${collName}':`, collError);
+              // Continue to the next collection
+            }
+          }
+          
+          if (docSnap && docSnap.exists()) {
             const data = docSnap.data();
             
             // Generation options and API request data handling removed as they're no longer needed
             
-            // Convert Firestore timestamps to Date objects
-            const createdAt = data.createdAt?.toDate() || new Date();
+            // Convert Firestore timestamps to Date objects, handling different formats
+            let createdAt: Date;
+            if (data.createdAt) {
+              if (typeof data.createdAt.toDate === 'function') {
+                // It's a Firestore timestamp
+                createdAt = data.createdAt.toDate();
+              } else if (data.createdAt instanceof Date) {
+                // It's already a Date object
+                createdAt = data.createdAt;
+              } else if (typeof data.createdAt === 'string') {
+                // It's a string date
+                createdAt = new Date(data.createdAt);
+              } else if (typeof data.createdAt === 'number') {
+                // It's a timestamp in milliseconds
+                createdAt = new Date(data.createdAt);
+              } else {
+                // Fallback to current date
+                console.warn('Unknown createdAt format:', data.createdAt);
+                createdAt = new Date();
+              }
+            } else {
+              // No createdAt field
+              createdAt = new Date();
+            }
             
             // Create a QuestionSet object from the document data
             const loadedQuestionSet: QuestionSet = {
@@ -96,6 +139,7 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
             setDebugInfo(prev => `${prev}\nSuccessfully loaded question set from Firestore with ${loadedQuestionSet.questions?.length || 0} questions`);
           } else {
             setDebugInfo(prev => `${prev}\nNo question set found in Firestore with ID: ${firestoreQuestionSetId}`);
+            console.log('No question set found in any collection with ID:', firestoreQuestionSetId);
             // If not found in Firestore, fall back to localStorage
             loadFromLocalStorage();
           }
@@ -208,11 +252,16 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
     try {
       if (!currentUser) {
         console.log('User not logged in, skipping Firestore save');
+        setDebugInfo(prev => `${prev}\nUser not logged in, skipping Firestore save`);
         return;
       }
       
       // Add user ID to question set
       questionSet.userId = currentUser.uid;
+      
+      // Log the question set being saved
+      console.log('Saving question set to Firestore:', JSON.stringify(questionSet, null, 2));
+      setDebugInfo(prev => `${prev}\nAttempting to save question set to Firestore...`);
       
       // Save to Firestore
       const docRef = await saveQuestionSetToFirestore(questionSet);
@@ -227,12 +276,17 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
           };
         });
         
+        console.log('Question set saved successfully with ID:', docRef.id);
         setDebugInfo(prev => `${prev}\nQuestion set saved to Firestore with ID: ${docRef.id}`);
         toast.success('Question set saved to your account');
+      } else {
+        console.warn('No document reference returned from saveQuestionSetToFirestore');
+        setDebugInfo(prev => `${prev}\nWarning: No document reference returned when saving to Firestore`);
       }
     } catch (error) {
       console.error('Error saving question set to Firestore:', error);
       setDebugInfo(prev => `${prev}\nError saving to Firestore: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error('Failed to save question set to your account');
     }
   };
 

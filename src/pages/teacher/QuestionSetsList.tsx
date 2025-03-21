@@ -106,13 +106,23 @@ export default function QuestionSetsList({ isDarkMode, onThemeToggle }: Question
     if (window.confirm('Are you sure you want to delete this question set? This action cannot be undone.')) {
       try {
         setLoading(true);
-        await deleteQuestionSet(id);
-        toast.success('Question set deleted successfully');
+        console.log(`Attempting to delete question set with ID: ${id}`);
+        
+        const result = await deleteQuestionSet(id);
+        
+        console.log(`Delete operation result:`, result);
+        toast.success(`Question set deleted successfully from collection '${result.collectionName}'`);
+        
         // Remove the set from state
-        setQuestionSets(prev => prev.filter(set => set.firebaseId !== id));
+        setQuestionSets(prev => {
+          const filtered = prev.filter(set => set.firebaseId !== id);
+          console.log(`Removed question set from state. Previous count: ${prev.length}, New count: ${filtered.length}`);
+          return filtered;
+        });
       } catch (error) {
         console.error('Error deleting question set:', error);
-        toast.error('Failed to delete question set. Please try again.');
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        toast.error(`Failed to delete question set: ${errorMessage}`);
       } finally {
         setLoading(false);
       }

@@ -1,6 +1,7 @@
- import { Resource } from '../types/resource';
+import { Resource } from '../types/resource';
 import { db } from '../firebase/config';
 import { collection, addDoc, serverTimestamp, DocumentReference, query, where, orderBy, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { updateContentStats } from './contentStatsService';
 
 export interface Note {
   id: string;
@@ -9,6 +10,7 @@ export interface Note {
 }
 
 export interface NotesSet {
+  id: string;
   title: string;
   subject: string;
   class: string;
@@ -41,8 +43,8 @@ export interface NotesGenerationOptions {
   userId?: string; // Optional user ID for associating notes with a user
 }
 
-// OpenAI API configuration - use environment variable
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+// Import the unified AI service
+import { generateContent } from './aiService';
 
 /**
  * Generates notes using the OpenAI API based on PDF content and user preferences
@@ -52,12 +54,8 @@ export const generateNotes = async (options: NotesGenerationOptions): Promise<No
   try {
     console.log('Generating notes with options:', options);
     
-    // Get API key from environment variable
-    const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-    
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key is not configured in environment variables');
-    }
+    // Log generation attempt
+    console.log('Attempting to generate notes with AI service');
     
     // Extract PDF URLs from resources
     const pdfUrls = options.resources.map(resource => resource.fileUrl);
@@ -75,31 +73,11 @@ export const generateNotes = async (options: NotesGenerationOptions): Promise<No
     console.log('System prompt:', systemPrompt);
     console.log('User prompt:', userPrompt);
     
-    // Call OpenAI API
-    const response = await fetch(OPENAI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4-turbo',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 4000
-      })
-    });
+    // Call AI service (OpenAI with Gemini fallback)
+    console.log('Calling AI service for notes generation...');
+    const content = await generateContent(systemPrompt, userPrompt);
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
-    }
-    
-    const data = await response.json();
-    const content = data.choices[0].message.content;
+    console.log('AI service response received successfully');
     
     console.log('Raw OpenAI response:', content);
     
@@ -165,6 +143,14 @@ export const saveNotesToFirestore = async (
     const docRef = await addDoc(collection(db, 'classnotes'), firestoreNotesSet);
     console.log('Notes saved to Firestore with ID:', docRef.id);
     
+    // Update content stats if userId is provided
+    if (notesSet.userId) {
+      await updateContentStats(notesSet.userId, {
+        type: 'notes',
+        operation: 'increment'
+      });
+    }
+    
     return docRef;
   } catch (error) {
     console.error('Error saving notes to Firestore:', error);
@@ -222,6 +208,7 @@ export const getUserNotes = async (userId: string): Promise<NotesSet[]> => {
       
       // Create a NotesSet object from the document data
       const notesSet: NotesSet = {
+        id: doc.id,
         title: data.title || '',
         subject: data.subject || '',
         class: data.class || '',
@@ -446,6 +433,7 @@ const createDefaultNotes = (options: NotesGenerationOptions): Note[] => {
  */
 const createDefaultNotesSet = (options: NotesGenerationOptions): NotesSet => {
   return {
+    id: '',
     title: `${options.subject} - ${options.chapters.join(', ')} Notes`,
     subject: options.subject,
     class: options.class,
@@ -475,5 +463,50 @@ const getNoteTypeDescription = (noteType: string): string => {
       return 'Theorems & Formulas - emphasis on mathematical theorems, formulas, and their applications';
     default:
       return 'Standard notes format';
+  }
+};
+
+/**
+ * Creates a new notes set in Firestore
+ */
+export const createNotesSet = async (notesSet: Omit<NotesSet, 'id' | 'createdAt'>): Promise<DocumentReference> => {
+  try {
+    // Create the notes set
+    const docRef = await addDoc(collection(db, 'classnotes'), {
+      ...notesSet,
+      createdAt: serverTimestamp()
+    });
+
+    // Update content stats if userId is provided
+    if (notesSet.userId) {
+      await updateContentStats(notesSet.userId, {
+        type: 'notes',
+        operation: 'increment'
+      });
+    }
+
+    return docRef;
+  } catch (error) {
+    console.error('Error creating notes set:', error);
+    throw error;
+  }
+};
+
+/**
+ * Deletes a notes set from Firestore
+ */
+export const deleteNotesSet = async (notesSetId: string, userId: string): Promise<void> => {
+  try {
+    // Delete the notes set
+    await deleteDoc(doc(db, 'classnotes', notesSetId));
+
+    // Update content stats
+    await updateContentStats(userId, {
+      type: 'notes',
+      operation: 'decrement'
+    });
+  } catch (error) {
+    console.error('Error deleting notes set:', error);
+    throw error;
   }
 };

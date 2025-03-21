@@ -28,8 +28,8 @@ export interface FlashcardGenerationOptions {
   additionalInstructions: string;
 }
 
-// OpenAI API configuration - use environment variable
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+// Import the unified AI service
+import { generateContent } from './aiService';
 
 /**
  * Generates flashcards using the OpenAI API based on PDF content and user preferences
@@ -38,12 +38,8 @@ export const generateFlashcards = async (options: FlashcardGenerationOptions): P
   try {
     console.log('Generating flashcards with options:', options);
     
-    // Get API key from environment variable
-    const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-    
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key is not configured in environment variables');
-    }
+    // Log generation attempt
+    console.log('Attempting to generate flashcards with AI service');
     
     // Extract PDF URLs from resources
     const pdfUrls = options.resources.map(resource => resource.fileUrl);
@@ -58,31 +54,11 @@ export const generateFlashcards = async (options: FlashcardGenerationOptions): P
     // Create the user prompt with PDF URLs
     const userPrompt = createUserPrompt(options, pdfUrls);
     
-    // Call OpenAI API
-    const response = await fetch(OPENAI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4-turbo',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 4000
-      })
-    });
+    // Call AI service (OpenAI with Gemini fallback)
+    console.log('Calling AI service for flashcards generation...');
+    const content = await generateContent(systemPrompt, userPrompt);
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
-    }
-    
-    const data = await response.json();
-    const content = data.choices[0].message.content;
+    console.log('AI service response received successfully');
     
     // Parse the response into a FlashcardSet
     const flashcardSet = parseOpenAIResponse(content, options);

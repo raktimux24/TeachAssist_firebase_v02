@@ -32,6 +32,9 @@ export interface PresentationGenerationOptions {
   resources: Resource[];
 }
 
+// Import the unified AI service
+import { generateContent } from './aiService';
+
 // OpenAI API configuration
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
@@ -102,13 +105,7 @@ export const generatePresentation = async (options: PresentationGenerationOption
   try {
     console.log('Generating presentation with options:', options);
     
-    // Verify API key is available
-    if (!OPENAI_API_KEY) {
-      console.error('OpenAI API key is missing from environment variables');
-      throw new Error('OpenAI API key is not configured in environment variables');
-    }
-    
-    console.log('OpenAI API Key available:', OPENAI_API_KEY ? `Yes (length: ${OPENAI_API_KEY.length})` : 'No');
+    // Log model information
     console.log('API Key type:', IS_PROJECT_KEY ? 'Project API Key' : 'Standard API Key');
     console.log('Using model:', DEFAULT_MODEL);
     
@@ -127,61 +124,18 @@ export const generatePresentation = async (options: PresentationGenerationOption
     
     console.log('Sending request to OpenAI API...');
     
-    // Call OpenAI API
-    const response = await fetch(OPENAI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
+    // Call AI service (OpenAI with Gemini fallback)
+    console.log('Calling AI service for presentation generation...');
+    const content = await generateContent(
+      systemPrompt, 
+      userPrompt, 
+      {
         model: DEFAULT_MODEL,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 4000,
-        response_format: { type: "json_object" } // Explicitly request JSON response format
-      })
-    });
-    
-    console.log('OpenAI API response status:', response.status);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error response text:', errorText);
-      
-      try {
-        const errorData = JSON.parse(errorText);
-        console.error('OpenAI API error:', errorData);
-        throw new Error(`OpenAI API error: ${errorData.error?.message || response.statusText || 'Unknown error'}`);
-      } catch (parseError) {
-        console.error('Failed to parse error response as JSON:', parseError);
-        throw new Error(`OpenAI API error: ${response.statusText || 'Unknown error'} (Status: ${response.status})`);
+        responseFormat: { type: "json_object" }
       }
-    }
+    );
     
-    const responseText = await response.text();
-    console.log('OpenAI API raw response received (first 100 chars):', responseText.substring(0, 100) + '...');
-    
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Error parsing response JSON:', parseError);
-      console.error('Raw response that failed to parse (first 500 chars):', responseText.substring(0, 500) + '...');
-      throw new Error('Failed to parse OpenAI API response as JSON');
-    }
-    
-    console.log('OpenAI API parsed response structure:', Object.keys(data));
-    
-    if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
-      console.error('Unexpected response structure from OpenAI API:', data);
-      throw new Error('Unexpected response structure from OpenAI API');
-    }
-    
-    const content = data.choices[0].message.content;
+    console.log('AI service response received successfully');
     console.log('OpenAI response content (first 100 chars):', content.substring(0, 100) + '...');
     
     // Parse the response into a Presentation

@@ -1,6 +1,7 @@
 import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc, orderBy, limit } from 'firebase/firestore';
 import { db } from './config';
 import { FlashcardSet } from '../services/openai';
+import { updateContentStats } from '../services/contentStatsService';
 
 // Collection reference
 const flashcardsCollection = collection(db, 'flashcards');
@@ -47,6 +48,12 @@ export const saveFlashcardSet = async (params: FlashcardSet & SaveFlashcardSetPa
     
     const docRef = await addDoc(flashcardsCollection, flashcardData);
     console.log('Successfully saved flashcard set with ID:', docRef.id);
+    
+    // Update content stats
+    await updateContentStats(params.userId, {
+      type: 'flashcards',
+      operation: 'increment'
+    });
     
     return { id: docRef.id, ...flashcardData };
   } catch (error) {
@@ -126,8 +133,27 @@ export const updateFlashcardSet = async (
  */
 export const deleteFlashcardSet = async (flashcardId: string) => {
   try {
+    // Get the flashcard set first to get the userId
     const docRef = doc(flashcardsCollection, flashcardId);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      throw new Error('Flashcard set not found');
+    }
+    
+    const flashcardData = docSnap.data();
+    
+    // Delete the document
     await deleteDoc(docRef);
+    
+    // Update content stats if userId exists
+    if (flashcardData.userId) {
+      await updateContentStats(flashcardData.userId, {
+        type: 'flashcards',
+        operation: 'decrement'
+      });
+    }
+    
     return { success: true };
   } catch (error) {
     console.error('Error deleting flashcard set:', error);

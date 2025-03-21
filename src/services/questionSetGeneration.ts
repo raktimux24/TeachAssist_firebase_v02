@@ -1,6 +1,7 @@
 import { Resource } from '../types/resource';
 import { db } from '../firebase/config';
-import { collection, addDoc, serverTimestamp, DocumentReference, query, where, orderBy, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, DocumentReference, query, where, orderBy, getDocs, doc, deleteDoc, getDoc } from 'firebase/firestore';
+import { updateContentStats } from './contentStatsService';
 
 export interface Question {
   id: string;
@@ -38,8 +39,8 @@ export interface QuestionSetGenerationOptions {
   book?: string; // Optional book property
 }
 
-// OpenAI API configuration - use environment variable
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+// Import the unified AI service
+import { generateContent } from './aiService';
 
 /**
  * Generates a question set using the OpenAI API based on PDF content and user preferences
@@ -49,15 +50,8 @@ export const generateQuestionSet = async (options: QuestionSetGenerationOptions)
   try {
     console.log('Generating question set with options:', options);
     
-    // Get API key from environment variable
-    const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-    
-    console.log('OpenAI API Key exists:', !!OPENAI_API_KEY);
-    console.log('OpenAI API Key length:', OPENAI_API_KEY ? OPENAI_API_KEY.length : 0);
-    
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key is not configured in environment variables');
-    }
+    // Log generation attempt
+    console.log('Attempting to generate question set with AI service');
     
     // Extract PDF URLs from resources
     const pdfUrls = options.resources.map(resource => resource.fileUrl);
@@ -76,35 +70,11 @@ export const generateQuestionSet = async (options: QuestionSetGenerationOptions)
     console.log('System prompt:', systemPrompt);
     console.log('User prompt:', userPrompt);
     
-    // Call OpenAI API
-    console.log('Calling OpenAI API...');
-    const response = await fetch(OPENAI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4-turbo',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 4000
-      })
-    });
+    // Call AI service (OpenAI with Gemini fallback)
+    console.log('Calling AI service for question set generation...');
+    const content = await generateContent(systemPrompt, userPrompt);
     
-    console.log('OpenAI API response status:', response.status);
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('OpenAI API error details:', errorData);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
-    }
-    
-    const data = await response.json();
-    const content = data.choices[0].message.content;
+    console.log('AI service response received successfully');
     
     console.log('Raw OpenAI response:', content);
     
@@ -201,6 +171,15 @@ export const saveQuestionSetToFirestore = async (
           
           docRef = await addDoc(collection(db, collName), sanitizedData);
           console.log(`Question set saved to Firestore collection '${collName}' with ID:`, docRef.id);
+          
+          // Update content stats
+          if (sanitizedData.userId) {
+            await updateContentStats(sanitizedData.userId, {
+              type: 'questionSets',
+              operation: 'increment'
+            });
+          }
+          
           return docRef;
         } catch (collError) {
           console.warn(`Error saving to collection '${collName}':`, collError);
@@ -275,8 +254,30 @@ export const getUserQuestionSets = async (userId: string): Promise<QuestionSet[]
         querySnapshot.forEach((doc) => {
       const data = doc.data();
       
-      // Convert Firestore timestamps to Date objects
-      const createdAt = data.createdAt?.toDate() || new Date();
+      // Convert Firestore timestamps to Date objects, handling different formats
+      let createdAt: Date;
+      if (data.createdAt) {
+        if (typeof data.createdAt.toDate === 'function') {
+          // It's a Firestore timestamp
+          createdAt = data.createdAt.toDate();
+        } else if (data.createdAt instanceof Date) {
+          // It's already a Date object
+          createdAt = data.createdAt;
+        } else if (typeof data.createdAt === 'string') {
+          // It's a string date
+          createdAt = new Date(data.createdAt);
+        } else if (typeof data.createdAt === 'number') {
+          // It's a timestamp in milliseconds
+          createdAt = new Date(data.createdAt);
+        } else {
+          // Fallback to current date
+          console.warn('Unknown createdAt format:', data.createdAt);
+          createdAt = new Date();
+        }
+      } else {
+        // No createdAt field
+        createdAt = new Date();
+      }
       
       // Create a QuestionSet object from the document data
       const questionSet: QuestionSet = {
@@ -503,32 +504,59 @@ const createDefaultQuestionSet = (options: QuestionSetGenerationOptions): Questi
 /**
  * Deletes a question set from Firestore
  */
-export const deleteQuestionSet = async (id: string): Promise<void> => {
+export const deleteQuestionSet = async (questionSetId: string) => {
   try {
-    if (!id) {
-      throw new Error('Question set ID is required for deletion');
-    }
-
+    console.log(`Attempting to delete question set with ID: ${questionSetId}`);
+    
     // Try different collection names for backward compatibility
-    const collectionNames = ['questionsets', 'questionSet', 'questionset'];
-    let deleted = false;
-
+    const collectionNames = ['questionsets', 'questionSet', 'questionset', 'questionSets'];
+    let docSnap = null;
+    let collectionName = '';
+    
+    // Try to find the document in each collection
     for (const collName of collectionNames) {
       try {
-        const docRef = doc(db, collName, id);
-        await deleteDoc(docRef);
-        console.log(`Question set deleted successfully from collection '${collName}':`, id);
-        deleted = true;
-        break; // Exit loop if deletion succeeds
+        console.log(`Trying to find question set in collection '${collName}'`);
+        const docRef = doc(db, collName, questionSetId);
+        const snapshot = await getDoc(docRef);
+        
+        if (snapshot.exists()) {
+          docSnap = snapshot;
+          collectionName = collName;
+          console.log(`Found question set in collection '${collName}'`);
+          break;
+        }
       } catch (collError) {
-        console.warn(`Failed to delete from collection '${collName}':`, collError);
+        console.warn(`Error checking collection '${collName}':`, collError);
         // Continue to the next collection
       }
     }
-
-    if (!deleted) {
-      throw new Error(`Could not delete question set with ID ${id} from any collection`);
+    
+    if (!docSnap || !collectionName) {
+      console.error(`Question set with ID ${questionSetId} not found in any collection`);
+      throw new Error('Question set not found in any collection');
     }
+    
+    const questionSetData = docSnap.data();
+    console.log(`Found question set data:`, questionSetData);
+    
+    // Delete the document from the collection where it was found
+    const docRef = doc(db, collectionName, questionSetId);
+    console.log(`Deleting document from collection '${collectionName}'`);
+    await deleteDoc(docRef);
+    console.log(`Successfully deleted document from collection '${collectionName}'`);
+    
+    // Update content stats if userId exists
+    if (questionSetData.userId) {
+      console.log(`Updating content stats for user ${questionSetData.userId}`);
+      await updateContentStats(questionSetData.userId, {
+        type: 'questionSets',
+        operation: 'decrement'
+      });
+      console.log(`Content stats updated successfully`);
+    }
+    
+    return { success: true, collectionName };
   } catch (error) {
     console.error('Error deleting question set:', error);
     throw error;

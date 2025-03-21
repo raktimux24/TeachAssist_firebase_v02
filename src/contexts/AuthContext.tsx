@@ -8,8 +8,9 @@ import {
   sendPasswordResetEmail,
   updateProfile
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
+import type { ContentStats } from '../types/contentStats';
 
 export interface UserInfo extends UserData {
   uid: string;
@@ -17,6 +18,7 @@ export interface UserInfo extends UserData {
   darkMode?: boolean;
   createdAt?: any;
   updatedAt?: any;
+  contentStats?: ContentStats;
 }
 
 interface AuthContextType {
@@ -80,7 +82,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         role: userData.role,
         organization: userData.organization,
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        contentStats: {
+          notes: 0,
+          flashcards: 0,
+          questionSets: 0,
+          lessonPlans: 0,
+          presentations: 0,
+          lastUpdated: new Date()
+        }
       };
 
       // Create user document in Firestore
@@ -161,7 +171,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const fetchUserData = async (user: User) => {
     try {
       // Skip fetching if we're in the middle of creating a new user
-      // Using type assertion to access custom property
       if ((user as any)._isCreatingNewUser) {
         console.log('Skipping fetchUserData during new user creation');
         return;
@@ -195,6 +204,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Ensure role is always lowercase for consistent comparison
         if (userData.role) {
           userData.role = userData.role.toLowerCase();
+        }
+        
+        // Initialize content stats if they don't exist
+        if (!userData.contentStats) {
+          console.log('Initializing content stats for existing user');
+          userData.contentStats = {
+            notes: 0,
+            flashcards: 0,
+            questionSets: 0,
+            lessonPlans: 0,
+            presentations: 0,
+            lastUpdated: new Date()
+          };
+          
+          // Update Firestore with initialized content stats
+          await updateDoc(userDocRef, {
+            contentStats: userData.contentStats,
+            updatedAt: serverTimestamp()
+          });
         }
         
         // Add photoURL from Firebase Auth user if available
@@ -243,7 +271,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         let createRetries = 3;
         while (createRetries > 0) {
           try {
-            await setDoc(userDocRef, defaultUserData);
+            await setDoc(doc(db, 'users', user.uid), defaultUserData);
             console.log('Created default user data:', defaultUserData);
             break; // If successful, exit the retry loop
           } catch (createError) {

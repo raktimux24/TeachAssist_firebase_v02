@@ -49,6 +49,9 @@ export default function PresentationsResults({ isDarkMode, onThemeToggle }: Pres
           
           // Also store in sessionStorage for the PresentationPreview component
           sessionStorage.setItem('generatedPresentation', JSON.stringify(fetchedPresentation));
+          
+          // Store the presentation ID to prevent duplicate saves
+          sessionStorage.setItem('presentationId', presentationId);
         } else {
           setError('Presentation not found. It may have been deleted or you may not have permission to view it.');
         }
