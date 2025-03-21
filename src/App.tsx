@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import DailyStatsDebugger from './components/debug/DailyStatsDebugger';
 import { AdminRoute, TeacherRoute, StudentRoute, PublicRoute } from './components/ProtectedRoutes';
 import { useAuth } from './contexts/AuthContext';
 import { FlashcardsProvider } from './context/FlashcardsContext';
@@ -193,6 +194,8 @@ function App() {
             <Route path="/teacher/content/presentations/results" element={<PresentationsResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content/presentations/results/:presentationId" element={<PresentationsResults isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
             <Route path="/teacher/content/presentations/:id" element={<PresentationView isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />} />
+            {/* Debug route for daily stats */}
+            <Route path="/teacher/debug/daily-stats" element={<DailyStatsDebugger />} />
           </Route>
 
           {/* Student Routes - only accessible by student users */}

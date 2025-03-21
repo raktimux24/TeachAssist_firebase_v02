@@ -1,6 +1,7 @@
-import { doc, getDoc, updateDoc, setDoc, increment, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { ContentStats, ContentStatsUpdate } from '../types/contentStats';
+import { updateDailyContentStats, initializeDailyStats } from './dailyContentStatsService';
 
 const DEFAULT_STATS: ContentStats = {
   notes: 0,
@@ -84,16 +85,49 @@ export const getContentStats = async (userId: string): Promise<ContentStats> => 
  */
 export const updateContentStats = async (
   userId: string,
-  update: ContentStatsUpdate
+  update: ContentStatsUpdate,
+  date: Date = new Date()
 ): Promise<void> => {
   try {
     console.log('Updating content stats for user:', userId, 'with update:', update);
     const userStatsRef = doc(db, 'users', userId);
     
+    // Update overall stats
     await updateDoc(userStatsRef, {
       [`contentStats.${update.type}`]: increment(update.operation === 'increment' ? 1 : -1),
       'contentStats.lastUpdated': serverTimestamp()
     });
+
+    // Also update daily stats
+    try {
+      console.log('Attempting to update daily content stats for date:', date.toISOString());
+      await updateDailyContentStats(userId, update, date);
+      console.log('Successfully updated daily content stats');
+    } catch (dailyStatsError) {
+      console.error('Error updating daily content stats:', dailyStatsError);
+      
+      // Log more details about the error
+      if (dailyStatsError instanceof Error) {
+        console.error('Error name:', dailyStatsError.name);
+        console.error('Error message:', dailyStatsError.message);
+        console.error('Error stack:', dailyStatsError.stack);
+      }
+      
+      // Try to initialize the daily stats collection in case it doesn't exist
+      try {
+        console.log('Attempting to initialize daily stats as fallback...');
+        const initializeResult = await initializeDailyStats(userId, date);
+        console.log('Initialization result:', initializeResult);
+        
+        // Try updating again after initialization
+        console.log('Retrying daily stats update after initialization...');
+        await updateDailyContentStats(userId, update, date);
+        console.log('Successfully updated daily content stats on retry');
+      } catch (retryError) {
+        console.error('Failed to initialize and retry daily stats update:', retryError);
+        // Continue even if daily stats update fails
+      }
+    }
 
     console.log('Content stats updated successfully');
   } catch (error) {
