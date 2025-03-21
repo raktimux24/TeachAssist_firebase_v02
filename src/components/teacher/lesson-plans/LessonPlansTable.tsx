@@ -138,7 +138,7 @@ export default function LessonPlansTable({ plans, onEdit, onDelete, onView }: Le
                   <div className="flex items-center justify-end space-x-0.5 sm:space-x-2">
                     <button
                       onClick={() => onView(plan.id)}
-                      className="p-1 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                      className="p-1 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-full"
                       title="View"
                       aria-label="View lesson plan"
                     >
@@ -146,7 +146,7 @@ export default function LessonPlansTable({ plans, onEdit, onDelete, onView }: Le
                     </button>
                     <button
                       onClick={() => onEdit(plan.id)}
-                      className="p-1 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                      className="p-1 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-full"
                       title="Edit"
                       aria-label="Edit lesson plan"
                     >
@@ -154,7 +154,7 @@ export default function LessonPlansTable({ plans, onEdit, onDelete, onView }: Le
                     </button>
                     <button
                       onClick={() => onDelete(plan.id)}
-                      className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                      className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"
                       title="Delete"
                       aria-label="Delete lesson plan"
                     >

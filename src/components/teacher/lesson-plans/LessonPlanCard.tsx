@@ -76,7 +76,7 @@ export default function LessonPlanCard({ plan, onEdit, onDelete, onView }: Lesso
       <div className="flex justify-end space-x-1 sm:space-x-2 mt-auto pt-2 border-t border-gray-100 dark:border-gray-700">
         <button
           onClick={() => onView(plan.id)}
-          className="p-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="p-1.5 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-md"
           title="View"
           aria-label="View lesson plan"
         >
@@ -84,7 +84,7 @@ export default function LessonPlanCard({ plan, onEdit, onDelete, onView }: Lesso
         </button>
         <button
           onClick={() => onEdit(plan.id)}
-          className="p-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="p-1.5 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-md"
           title="Edit"
           aria-label="Edit lesson plan"
         >
@@ -92,7 +92,7 @@ export default function LessonPlanCard({ plan, onEdit, onDelete, onView }: Lesso
         </button>
         <button
           onClick={() => onDelete(plan.id)}
-          className="p-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"
           title="Delete"
           aria-label="Delete lesson plan"
         >

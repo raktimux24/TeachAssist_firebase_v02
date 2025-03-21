@@ -7,7 +7,7 @@ import { FlashcardsProvider } from './context/FlashcardsContext';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Features from './components/Features';
-import CTASection from './components/CTASection';
+import { CTASection } from './components/CTASection';
 import Footer from './components/Footer';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
