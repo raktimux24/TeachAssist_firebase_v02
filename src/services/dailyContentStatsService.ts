@@ -38,49 +38,88 @@ export const initializeDailyStats = async (
   userId: string, 
   date: Date = new Date()
 ): Promise<void> => {
-  try {
-    if (!userId) {
-      console.error('Cannot initialize daily stats: userId is empty or undefined');
-      return;
-    }
-    
-    console.log('Initializing daily content stats for user:', userId, 'date:', date);
-    const docId = getDailyStatsDocId(userId, date);
-    console.log('Daily stats document ID:', docId);
-    
-    const dailyStatsRef = doc(db, DAILY_STATS_COLLECTION, docId);
-    console.log('Checking if document exists in collection:', DAILY_STATS_COLLECTION);
-    
-    const docSnapshot = await getDoc(dailyStatsRef);
-
-    if (!docSnapshot.exists()) {
-      console.log('No daily stats found for this date, initializing with zeros');
-      const newStatsData = {
-        userId,
-        date: Timestamp.fromDate(date),
-        lessonPlans: 0,
-        questionSets: 0,
-        presentations: 0,
-        notes: 0,
-        flashcards: 0
-      };
+  const maxRetries = 3;
+  let retryCount = 0;
+  let lastError: any = null;
+  
+  while (retryCount < maxRetries) {
+    try {
+      if (!userId) {
+        console.error('Cannot initialize daily stats: userId is empty or undefined');
+        return;
+      }
       
-      console.log('Attempting to create new document with data:', JSON.stringify(newStatsData));
-      await setDoc(dailyStatsRef, newStatsData);
-      console.log('Successfully created new daily stats document');
-    } else {
-      console.log('Daily stats document already exists for this date');
+      console.log(`Initializing daily content stats for user: ${userId}, date: ${date} (attempt ${retryCount + 1}/${maxRetries})`);
+      const docId = getDailyStatsDocId(userId, date);
+      console.log('Daily stats document ID:', docId);
+      
+      const dailyStatsRef = doc(db, DAILY_STATS_COLLECTION, docId);
+      console.log('Checking if document exists in collection:', DAILY_STATS_COLLECTION);
+      
+      const docSnapshot = await getDoc(dailyStatsRef);
+
+      if (!docSnapshot.exists()) {
+        console.log('No daily stats found for this date, initializing with zeros');
+        const newStatsData = {
+          userId,
+          date: Timestamp.fromDate(date),
+          lessonPlans: 0,
+          questionSets: 0,
+          presentations: 0,
+          notes: 0,
+          flashcards: 0
+        };
+        
+        console.log('Attempting to create new document with data:', JSON.stringify(newStatsData));
+        await setDoc(dailyStatsRef, newStatsData);
+        console.log('Successfully created new daily stats document');
+      } else {
+        console.log('Daily stats document already exists for this date');
+      }
+      
+      // If we reach here, operation was successful
+      return;
+      
+    } catch (error) {
+      lastError = error;
+      console.error(`Error initializing daily content stats (attempt ${retryCount + 1}/${maxRetries}):`, error);
+      
+      // Log more details about the error
+      if (error instanceof Error) {
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        
+        // Check if it's a network-related error
+        const isNetworkError = 
+          error.message.includes('network') || 
+          error.message.includes('offline') || 
+          error.message.includes('connection') ||
+          error.message.includes('unavailable');
+          
+        if (isNetworkError && retryCount < maxRetries - 1) {
+          retryCount++;
+          const delayMs = 1000 * Math.pow(2, retryCount); // Exponential backoff
+          console.log(`Network error detected, retrying in ${delayMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+          continue;
+        }
+      }
+      
+      if (retryCount < maxRetries - 1) {
+        retryCount++;
+        const delayMs = 1000 * Math.pow(2, retryCount); // Exponential backoff
+        console.log(`Retrying in ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } else {
+        console.error(`Failed to initialize daily stats after ${maxRetries} attempts`);
+        throw error;
+      }
     }
-  } catch (error) {
-    console.error('Error initializing daily content stats:', error);
-    // Log more details about the error
-    if (error instanceof Error) {
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-    }
-    throw error;
   }
+  
+  // If we've exhausted all retries
+  throw lastError || new Error('Failed to initialize daily stats after multiple attempts');
 };
 
 /**
@@ -91,73 +130,123 @@ export const updateDailyContentStats = async (
   update: ContentStatsUpdate,
   date: Date = new Date()
 ): Promise<void> => {
-  try {
-    if (!userId) {
-      console.error('Cannot update daily stats: userId is empty or undefined');
-      return;
-    }
-    
-    if (!update || !update.type) {
-      console.error('Cannot update daily stats: invalid update object', update);
-      return;
-    }
-    
-    console.log('Updating daily content stats for user:', userId, 'with update:', update, 'date:', date);
-    const docId = getDailyStatsDocId(userId, date);
-    console.log('Daily stats document ID:', docId);
-    
-    const dailyStatsRef = doc(db, DAILY_STATS_COLLECTION, docId);
-    console.log('Checking if document exists in collection:', DAILY_STATS_COLLECTION);
-    
-    const docSnapshot = await getDoc(dailyStatsRef);
-
-    // If document doesn't exist, create it first
-    if (!docSnapshot.exists()) {
-      console.log('Document does not exist, initializing first');
-      await initializeDailyStats(userId, date);
+  const maxRetries = 3;
+  let retryCount = 0;
+  let lastError: any = null;
+  
+  while (retryCount < maxRetries) {
+    try {
+      if (!userId) {
+        console.error('Cannot update daily stats: userId is empty or undefined');
+        return;
+      }
       
-      // Verify the document was created
-      const verifySnapshot = await getDoc(dailyStatsRef);
-      if (!verifySnapshot.exists()) {
-        console.error('Failed to initialize document before update');
-        throw new Error('Document initialization failed');
+      if (!update || !update.type) {
+        console.error('Cannot update daily stats: invalid update object', update);
+        return;
+      }
+      
+      console.log(`Updating daily content stats for user: ${userId}, with update: ${JSON.stringify(update)}, date: ${date} (attempt ${retryCount + 1}/${maxRetries})`);
+      const docId = getDailyStatsDocId(userId, date);
+      console.log('Daily stats document ID:', docId);
+      
+      const dailyStatsRef = doc(db, DAILY_STATS_COLLECTION, docId);
+      console.log('Checking if document exists in collection:', DAILY_STATS_COLLECTION);
+      
+      let docExists = false;
+      try {
+        const docSnapshot = await getDoc(dailyStatsRef);
+        docExists = docSnapshot.exists();
+      } catch (readError) {
+        console.warn('Error checking if document exists:', readError);
+        // Continue with assumption that document needs to be initialized
+      }
+
+      // If document doesn't exist, create it first
+      if (!docExists) {
+        console.log('Document does not exist or could not be read, initializing first');
+        try {
+          await initializeDailyStats(userId, date);
+        } catch (initError) {
+          console.error('Error during initialization, will retry the whole operation:', initError);
+          throw initError; // This will trigger a retry of the whole operation
+        }
+        
+        // Verify the document was created
+        try {
+          const verifySnapshot = await getDoc(dailyStatsRef);
+          if (!verifySnapshot.exists()) {
+            console.error('Failed to initialize document before update');
+            throw new Error('Document initialization failed');
+          }
+        } catch (verifyError) {
+          console.warn('Error verifying document creation:', verifyError);
+          // Continue anyway and attempt the update
+        }
+      }
+
+      // Map the content type to the field name in the document
+      const fieldMap: Record<string, string> = {
+        'notes': 'notes',
+        'flashcards': 'flashcards',
+        'questionSets': 'questionSets',
+        'lessonPlans': 'lessonPlans',
+        'presentations': 'presentations'
+      };
+
+      const fieldName = fieldMap[update.type];
+      if (!fieldName) {
+        console.error('Unknown content type:', update.type);
+        throw new Error(`Unknown content type: ${update.type}`);
+      }
+      
+      const incrementValue = update.operation === 'increment' ? 1 : -1;
+      console.log(`Updating field '${fieldName}' with increment value: ${incrementValue}`);
+      
+      // Update the specific field
+      await updateDoc(dailyStatsRef, {
+        [fieldName]: increment(incrementValue)
+      });
+
+      console.log('Daily content stats updated successfully');
+      return; // Success, exit the function
+      
+    } catch (error) {
+      lastError = error;
+      console.error(`Error updating daily content stats (attempt ${retryCount + 1}/${maxRetries}):`, error);
+      
+      // Log more details about the error
+      if (error instanceof Error) {
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        
+        // Check if it's a network-related error
+        const isNetworkError = 
+          error.message.includes('network') || 
+          error.message.includes('offline') || 
+          error.message.includes('connection') ||
+          error.message.includes('unavailable');
+          
+        if (isNetworkError) {
+          console.warn('Network error detected, will retry');
+        }
+      }
+      
+      if (retryCount < maxRetries - 1) {
+        retryCount++;
+        const delayMs = 1000 * Math.pow(2, retryCount); // Exponential backoff
+        console.log(`Retrying update in ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } else {
+        console.error(`Failed to update daily stats after ${maxRetries} attempts`);
+        throw error;
       }
     }
-
-    // Map the content type to the field name in the document
-    const fieldMap: Record<string, string> = {
-      'notes': 'notes',
-      'flashcards': 'flashcards',
-      'questionSets': 'questionSets',
-      'lessonPlans': 'lessonPlans',
-      'presentations': 'presentations'
-    };
-
-    const fieldName = fieldMap[update.type];
-    if (!fieldName) {
-      console.error('Unknown content type:', update.type);
-      throw new Error(`Unknown content type: ${update.type}`);
-    }
-    
-    const incrementValue = update.operation === 'increment' ? 1 : -1;
-    console.log(`Updating field '${fieldName}' with increment value: ${incrementValue}`);
-    
-    // Update the specific field
-    await updateDoc(dailyStatsRef, {
-      [fieldName]: increment(incrementValue)
-    });
-
-    console.log('Daily content stats updated successfully');
-  } catch (error) {
-    console.error('Error updating daily content stats:', error);
-    // Log more details about the error
-    if (error instanceof Error) {
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-    }
-    throw error;
   }
+  
+  // If we've exhausted all retries
+  throw lastError || new Error('Failed to update daily stats after multiple attempts');
 };
 
 /**

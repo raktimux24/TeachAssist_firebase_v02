@@ -83,10 +83,11 @@ export const savePresentation = async (
     // Update content stats to increment the presentations count
     try {
       console.log('Updating content stats for user:', userId);
+      const creationDate = new Date(); // Use the current date for the stats
       await updateContentStats(userId, {
         type: 'presentations',
         operation: 'increment'
-      });
+      }, creationDate);
       console.log('Content stats updated successfully');
     } catch (statsError) {
       console.error('Error updating content stats:', statsError);
@@ -216,10 +217,11 @@ export const deletePresentation = async (presentationId: string) => {
     if (userId) {
       try {
         console.log('Updating content stats for user:', userId);
+        const deletionDate = new Date(); // Use the current date for the stats
         await updateContentStats(userId, {
           type: 'presentations',
           operation: 'decrement'
-        });
+        }, deletionDate);
         console.log('Content stats updated successfully after deletion');
       } catch (statsError) {
         console.error('Error updating content stats after deletion:', statsError);

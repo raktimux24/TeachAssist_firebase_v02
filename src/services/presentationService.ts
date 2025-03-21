@@ -41,8 +41,8 @@ const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const IS_PROJECT_KEY = OPENAI_API_KEY?.startsWith('sk-proj-');
 const DEFAULT_MODEL = IS_PROJECT_KEY ? 'gpt-3.5-turbo' : 'gpt-4-turbo';
 
-// Debug function to test OpenAI API connectivity
-export const testOpenAIConnection = async (): Promise<boolean> => {
+// Debug function to test OpenAI API connectivity with fallback to Gemini
+export const testOpenAIConnection = async (): Promise<{ success: boolean; provider: string; message: string }> => {
   try {
     console.log('Testing OpenAI API connection...');
     console.log('API Key available:', OPENAI_API_KEY ? 'Yes (length: ' + OPENAI_API_KEY.length + ')' : 'No');
@@ -51,7 +51,15 @@ export const testOpenAIConnection = async (): Promise<boolean> => {
     
     if (!OPENAI_API_KEY) {
       console.error('OpenAI API key is missing from environment variables');
-      return false;
+      
+      // Check if Gemini is available as fallback
+      const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+      if (GEMINI_API_KEY) {
+        console.log('Gemini API key found, using as fallback');
+        return { success: true, provider: 'gemini', message: 'OpenAI API key not found, but Gemini API is available' };
+      }
+      
+      return { success: false, provider: 'none', message: 'No API keys configured for either OpenAI or Gemini' };
     }
     
     // Simple test request
@@ -74,27 +82,83 @@ export const testOpenAIConnection = async (): Promise<boolean> => {
     console.log('Test API response status:', response.status);
     
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API test error response:', errorText);
+      let errorText = '';
+      let errorData: any = {};
       
       try {
-        const errorData = JSON.parse(errorText);
-        console.error('OpenAI API test error details:', errorData);
-      } catch (parseError) {
-        console.error('Failed to parse error response as JSON');
+        errorText = await response.text();
+        console.error('OpenAI API test error response:', errorText);
+        
+        if (errorText) {
+          try {
+            errorData = JSON.parse(errorText);
+            console.error('OpenAI API test error details:', errorData);
+          } catch (parseError) {
+            console.error('Failed to parse error response as JSON:', parseError);
+            // Create a fallback error object if parsing fails
+            errorData = { error: { message: `HTTP error ${response.status}: ${errorText}` } };
+          }
+        } else {
+          errorData = { error: { message: `HTTP error ${response.status} with empty response` } };
+        }
+      } catch (textError) {
+        console.error('Failed to read error response text:', textError);
+        errorData = { error: { message: `HTTP error ${response.status} (failed to read response)` } };
+      }
+    
+      // Check for billing issues
+      const isBillingIssue = 
+        errorData.error?.type === 'billing_not_active' || 
+        errorData.error?.code === 'billing_not_active' ||
+        (errorData.error?.message && (errorData.error.message.includes('billing') || 
+                                     errorData.error.message.includes('account is not active')));
+      
+      if (isBillingIssue) {
+        console.warn('OpenAI API billing issue detected');
+        
+        // Check if Gemini is available as fallback
+        const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+        if (GEMINI_API_KEY) {
+          console.log('Gemini API key found, using as fallback');
+          return { 
+            success: true, 
+            provider: 'gemini', 
+            message: 'OpenAI API has billing issues, but Gemini API is available as fallback' 
+          };
+        }
       }
       
-      return false;
+      console.error('OpenAI API connection test failed');
+      return { 
+        success: false, 
+        provider: 'none', 
+        message: `OpenAI API error: ${errorData.error?.message || 'Unknown error'}` 
+      };
     }
     
     const data = await response.json();
     console.log('OpenAI API test successful!');
     console.log('Response:', data.choices[0].message.content);
-    return true;
-    
+    return { success: true, provider: 'openai', message: 'OpenAI API connection successful' };
   } catch (error) {
     console.error('Error testing OpenAI connection:', error);
-    return false;
+    
+    // Check if Gemini is available as fallback
+    const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+    if (GEMINI_API_KEY) {
+      console.log('Gemini API key found, using as fallback after OpenAI error');
+      return { 
+        success: true, 
+        provider: 'gemini', 
+        message: 'OpenAI API connection failed, but Gemini API is available as fallback' 
+      };
+    }
+    
+    return { 
+      success: false, 
+      provider: 'none', 
+      message: `Error connecting to OpenAI API: ${error instanceof Error ? error.message : String(error)}` 
+    };
   }
 };
 
@@ -231,7 +295,7 @@ For each slide, you MUST provide:
 Important guidelines:
 1. Create exactly ${options.slideCount} slides.
 2. Make the content educational, accurate, and engaging for ${options.class} students.
-3. The presentation type is "${options.presentationType}" - structure the content accordingly.
+3. The presentation type is "${options.presentationType}" - ${getTypeDescription(options.presentationType)}
 4. For each slide, include:
    - Clear slide title
    - Detailed, informative bullet points (not just brief headings)
@@ -304,6 +368,7 @@ REMEMBER:
 
 /**
  * Returns a description of the presentation type
+ * Used in createSystemPrompt to generate appropriate instructions for the AI
  */
 const getTypeDescription = (type: string): string => {
   switch (type.toLowerCase()) {

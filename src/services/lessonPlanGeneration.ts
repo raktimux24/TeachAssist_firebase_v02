@@ -142,10 +142,11 @@ export const saveLessonPlanToFirestore = async (
     console.log('Lesson plan saved to Firestore with ID:', docRef.id);
     
     // Update content stats
+    const creationDate = new Date();
     await updateContentStats(lessonPlan.userId || '', {
       type: 'lessonPlans',
       operation: 'increment'
-    });
+    }, creationDate);
     
     return docRef;
   } catch (error) {
@@ -756,10 +757,11 @@ export const deleteLessonPlan = async (id: string): Promise<boolean> => {
     // Update content stats if userId exists
     const lessonPlanData = docSnap.data();
     if (lessonPlanData.userId) {
+      const deletionDate = new Date();
       await updateContentStats(lessonPlanData.userId, {
         type: 'lessonPlans',
         operation: 'decrement'
-      });
+      }, deletionDate);
     }
     
     console.log(`Successfully deleted lesson plan with ID ${id}`);
