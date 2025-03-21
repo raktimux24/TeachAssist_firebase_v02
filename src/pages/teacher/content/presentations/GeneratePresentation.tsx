@@ -245,8 +245,13 @@ export default function GeneratePresentation({ isDarkMode, onThemeToggle }: Gene
       // Generate presentation
       const presentation = await generatePresentation(options);
       
-      // Store the presentation in sessionStorage to access it in the results page
+      // Store the presentation and options in sessionStorage to access it in the results page
       sessionStorage.setItem('generatedPresentation', JSON.stringify(presentation));
+      sessionStorage.setItem('presentationGenerationOptions', JSON.stringify(options));
+      
+      // Clear any existing presentation ID and saved flag to ensure this is treated as a new presentation
+      sessionStorage.removeItem('presentationId');
+      sessionStorage.removeItem('presentationSavedToFirebase');
       
       // Navigate to the results page
       navigate('/teacher/content/presentations/results');

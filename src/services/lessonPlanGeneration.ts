@@ -1,6 +1,7 @@
 import { Resource } from '../types/resource';
 import { db } from '../firebase/config';
 import { collection, addDoc, serverTimestamp, DocumentReference, query, where, getDocs, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { updateContentStats } from './contentStatsService';
 
 export interface LessonPlanSection {
   id: string;
@@ -38,8 +39,8 @@ export interface LessonPlanGenerationOptions {
   userId?: string; // Optional user ID for associating lesson plans with a user
 }
 
-// OpenAI API configuration - use environment variable
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+// Import the unified AI service
+import { generateContent } from './aiService';
 
 /**
  * Generates lesson plans using the OpenAI API based on PDF content and user preferences
@@ -49,12 +50,8 @@ export const generateLessonPlan = async (options: LessonPlanGenerationOptions): 
   try {
     console.log('Generating lesson plan with options:', options);
     
-    // Get API key from environment variable
-    const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-    
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key is not configured in environment variables');
-    }
+    // Log generation attempt
+    console.log('Attempting to generate lesson plan with AI service');
     
     // Extract PDF URLs from resources
     const pdfUrls = options.resources.map(resource => resource.fileUrl);
@@ -72,31 +69,11 @@ export const generateLessonPlan = async (options: LessonPlanGenerationOptions): 
     console.log('System prompt:', systemPrompt);
     console.log('User prompt:', userPrompt);
     
-    // Call OpenAI API
-    const response = await fetch(OPENAI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4-turbo',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 4000
-      })
-    });
+    // Call AI service (OpenAI with Gemini fallback)
+    console.log('Calling AI service for lesson plan generation...');
+    const content = await generateContent(systemPrompt, userPrompt);
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
-    }
-    
-    const data = await response.json();
-    const content = data.choices[0].message.content;
+    console.log('AI service response received successfully');
     
     console.log('Raw OpenAI response:', content);
     
@@ -163,6 +140,12 @@ export const saveLessonPlanToFirestore = async (
     // Add to the lessonplan collection (renamed from lessonplans)
     const docRef = await addDoc(collection(db, 'lessonplan'), firestoreLessonPlan);
     console.log('Lesson plan saved to Firestore with ID:', docRef.id);
+    
+    // Update content stats
+    await updateContentStats(lessonPlan.userId || '', {
+      type: 'lessonPlans',
+      operation: 'increment'
+    });
     
     return docRef;
   } catch (error) {
@@ -329,9 +312,12 @@ export const updateLessonPlan = async (lessonPlan: LessonPlan): Promise<boolean>
  * Creates the system prompt for the OpenAI API
  */
 const createSystemPrompt = (options: LessonPlanGenerationOptions): string => {
+  // Get the format description to include in the system prompt
   const formatDescription = getFormatDescription(options.format);
   
   return `You are an expert educational content designer specialized in creating comprehensive lesson plans and presentation slide decks from academic content. Your task is to analyze PDF documents and transform them into detailed, structured educational materials based on user specifications.
+
+${formatDescription}
 
 WORKFLOW:
 1. Analyze the provided PDF content thoroughly
@@ -699,9 +685,11 @@ const getFormatDescription = (format: 'general' | 'subject-specific'): string =>
   }
 };
 
+// Commented out to fix lint error - this function is not currently used but kept for future reference
 /**
  * Gets detailed guidance for the lesson plan format
  */
+/*
 const getFormatGuidance = (): string => {
   return `**General lesson plans** provide a foundational structure for educators to organize their teaching, focusing on universal skills and effective instructional delivery applicable across different subjects. They typically include components such as learning objectives, teaching activities, and assessment strategies. A general lesson plan aims to guide how a teacher will impart information, engage students, and check for understanding, often incorporating broader pedagogical approaches. For instance, explicit instruction, which involves setting clear criteria, modeling, assessing, and providing feedback, is a teaching strategy applicable across various subjects. Similarly, a lesson plan might include time for direct instruction, guided discussion, and activities for review.
 
@@ -722,7 +710,7 @@ While general lesson plans provide a broad structure, **subject-specific plans d
 Both general and subject-specific lesson plans within the CBSE framework are increasingly influenced by modern teaching methods that emphasize **student-centered learning**, **experiential learning**, and **competency-based education**. Strategies like **inquiry-based learning** and **problem-based learning** are encouraged across subjects. The goal is to move away from rote memorization towards building actual knowledge and skills. Differentiation to address diverse learning needs is also a crucial aspect integrated into both general frameworks and subject-specific applications. Furthermore, the integration of technology and **AI tools** is being explored to enhance lesson planning and resource creation.
 
 In essence, while general lesson plans provide a common foundation for effective teaching, subject-specific lesson plans build upon this foundation by incorporating the unique pedagogical needs and content of different disciplines, ensuring a more targeted and effective learning experience for students. CBSE's approach emphasizes a blend of structured planning with flexibility to adapt to the specific demands of each subject while aligning with national educational goals.`;
-};
+};*/
 
 /**
  * Deletes a lesson plan from Firestore
@@ -764,6 +752,15 @@ export const deleteLessonPlan = async (id: string): Promise<boolean> => {
     // Delete the document from the primary collection
     console.log(`Deleting document from 'lessonplan' collection`);
     await deleteDoc(docRef);
+    
+    // Update content stats if userId exists
+    const lessonPlanData = docSnap.data();
+    if (lessonPlanData.userId) {
+      await updateContentStats(lessonPlanData.userId, {
+        type: 'lessonPlans',
+        operation: 'decrement'
+      });
+    }
     
     console.log(`Successfully deleted lesson plan with ID ${id}`);
     return true;

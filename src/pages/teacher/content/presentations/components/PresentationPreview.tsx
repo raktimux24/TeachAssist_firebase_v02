@@ -62,6 +62,11 @@ export default function PresentationPreview() {
     console.log('PresentationPreview: Loading presentation from sessionStorage');
     const savedPresentation = sessionStorage.getItem('generatedPresentation');
     const generationOptions = sessionStorage.getItem('presentationGenerationOptions');
+    const presentationId = sessionStorage.getItem('presentationId');
+    const presentationSavedToFirebase = sessionStorage.getItem('presentationSavedToFirebase');
+    
+    console.log('PresentationPreview: presentationId =', presentationId);
+    console.log('PresentationPreview: presentationSavedToFirebase =', presentationSavedToFirebase);
     
     if (savedPresentation) {
       console.log('PresentationPreview: Found saved presentation in sessionStorage');
@@ -78,9 +83,25 @@ export default function PresentationPreview() {
         setPresentation(parsedPresentation);
         setLoadError(null);
         
-        // Save to Firebase automatically if user is logged in
-        if (currentUser && generationOptions) {
+        // Only save to Firebase if:
+        // 1. User is logged in
+        // 2. We have generation options
+        // 3. There's no presentationId (which means it's a new presentation, not loaded from Firebase)
+        // 4. The presentation hasn't already been saved to Firebase in this session
+        if (currentUser && generationOptions && !presentationId && presentationSavedToFirebase !== 'true') {
+          console.log('PresentationPreview: New presentation detected, saving to Firebase...');
           saveToFirebase(parsedPresentation, JSON.parse(generationOptions));
+        } else {
+          console.log('PresentationPreview: Presentation already has an ID or missing required data, skipping save');
+          if (!currentUser) console.log('PresentationPreview: User not logged in');
+          if (!generationOptions) console.log('PresentationPreview: Missing generation options');
+          if (presentationId) console.log('PresentationPreview: Presentation already has ID:', presentationId);
+          if (presentationSavedToFirebase === 'true') console.log('PresentationPreview: Presentation already saved to Firebase in this session');
+          
+          // If we already have a saved presentation ID, update the save status to show as saved
+          if (presentationId || presentationSavedToFirebase === 'true') {
+            setSaveStatus('saved');
+          }
         }
       } catch (error) {
         console.error('PresentationPreview: Error parsing presentation from sessionStorage:', error);
@@ -104,6 +125,10 @@ export default function PresentationPreview() {
       console.log('PresentationPreview: Saving presentation to Firebase');
       setSaveStatus('saving');
       
+      // Set a flag to indicate that we're in the process of saving to Firebase
+      // This prevents other components from triggering additional saves
+      sessionStorage.setItem('presentationSavedToFirebase', 'true');
+      
       const savedPresentation = await savePresentation(
         presentationData,
         currentUser.uid,
@@ -112,6 +137,9 @@ export default function PresentationPreview() {
       
       console.log('PresentationPreview: Presentation saved successfully:', savedPresentation);
       setSaveStatus('saved');
+      
+      // Store the presentation ID to prevent duplicate saves
+      sessionStorage.setItem('presentationId', savedPresentation.id);
       
       // Auto-hide success message after 5 seconds
       setTimeout(() => {

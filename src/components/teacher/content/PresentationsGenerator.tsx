@@ -237,6 +237,11 @@ export default function PresentationsGenerator({ isDarkMode }: PresentationsGene
       
       // Save the generated presentation and options to sessionStorage
       console.log('Saving presentation to sessionStorage');
+      
+      // Clear any existing presentation ID and saved flag to ensure this is treated as a new presentation
+      sessionStorage.removeItem('presentationId');
+      sessionStorage.removeItem('presentationSavedToFirebase');
+      
       sessionStorage.setItem('generatedPresentation', JSON.stringify(presentation));
       sessionStorage.setItem('presentationGenerationOptions', JSON.stringify({
         class: selectedClass,
