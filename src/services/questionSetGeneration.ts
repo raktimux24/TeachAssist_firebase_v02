@@ -174,10 +174,11 @@ export const saveQuestionSetToFirestore = async (
           
           // Update content stats
           if (sanitizedData.userId) {
+            const creationDate = new Date();
             await updateContentStats(sanitizedData.userId, {
               type: 'questionSets',
               operation: 'increment'
-            });
+            }, creationDate);
           }
           
           return docRef;
@@ -319,24 +320,32 @@ const createSystemPrompt = (options: QuestionSetGenerationOptions): string => {
 Your task is to generate a set of questions based on the PDF content that will be provided.
 The questions should be tailored for ${options.class} students studying ${options.subject}.
 
+IMPORTANT: For multiple-choice questions, you MUST provide real, substantive answer options - NOT generic placeholders like "Option A", "Option B", etc.
+
 The question set should include the following types of questions:
 ${Object.entries(options.questionTypes)
   .filter(([_, count]) => count > 0)
   .map(([type, count]) => `- ${count} ${type.replace('-', ' ')} questions`)
   .join('\n')}
 
+===== CRITICAL INSTRUCTIONS =====
+1. Your response MUST be in valid JSON format ONLY. Do not include any text outside of the JSON object.
+2. For multiple-choice questions (MCQs), you MUST provide REAL, SUBSTANTIVE answer options. NEVER use generic placeholders like "Option A", "Option B", etc.
+3. Each MCQ option must be a complete, meaningful answer choice with specific content related to the question.
+4. The correct answer for MCQs must exactly match one of the provided options.
+
 Difficulty level: ${options.difficulty}
 ${options.includeAnswers ? 'Include answers and explanations for each question.' : 'Do not include answers or explanations.'}
 
 Question Type Descriptions:
-- MCQ (Multiple Choice Questions): These are one-mark questions with four options, testing recall or conceptual understanding.
+- MCQ (Multiple Choice Questions): These are one-mark questions with four options, testing recall or conceptual understanding. Each option MUST contain REAL CONTENT specific to the subject matter, NOT generic placeholders like "Option A". For example, if asking about the capital of France, options should be actual city names like "Paris", "London", etc.
 - True/False: These are a format of objective-type questions where a statement must be judged as either correct or incorrect.
 - Short Answers: These questions require a brief explanation or a paragraph to test understanding and concise articulation of key points.
 - Long Answers: These are essay-type questions demanding detailed explanations, derivations, or essays to evaluate in-depth knowledge and written expression.
 - Fill in the Blanks: These are objective-type questions where students must complete a sentence with the missing word(s).
 - Passage Based / Source Based / Extract Based: These competency-based questions are framed around provided text, data, or scenarios, requiring students to apply concepts for interpretation or analysis.
 
-Format your response as a JSON object with the following structure:
+Your response MUST be a VALID JSON object with NO additional text, following this EXACT structure:
 {
   "title": "Question Set title",
   "subject": "${options.subject}",
@@ -348,31 +357,31 @@ Format your response as a JSON object with the following structure:
     {
       "id": "1",
       "type": "mcq",
-      "question": "Question text",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "answer": "Correct option (e.g., 'Option A')",
-      "explanation": "Explanation of why this is the correct answer"
+      "question": "What is the capital of France?",
+      "options": ["Paris", "London", "Berlin", "Madrid"],
+      "answer": "Paris",
+      "explanation": "Paris is the capital and largest city of France, located on the Seine River."
     },
     {
       "id": "2",
       "type": "true-false",
-      "question": "Statement to evaluate as true or false",
-      "answer": "True or False",
-      "explanation": "Explanation of why the statement is true or false"
+      "question": "The Earth orbits around the Sun.",
+      "answer": "True",
+      "explanation": "The Earth orbits around the Sun in an elliptical path, completing one orbit every 365.25 days."
     },
     {
       "id": "3",
       "type": "short-answers",
-      "question": "Short answer question",
-      "answer": "Expected answer",
-      "explanation": "Additional context or explanation"
+      "question": "Explain the process of photosynthesis.",
+      "answer": "Photosynthesis is the process by which green plants and some other organisms use sunlight to synthesize foods with carbon dioxide and water, generating oxygen as a byproduct.",
+      "explanation": "This is a fundamental biological process that converts light energy to chemical energy."
     },
     {
       "id": "4",
       "type": "long-answers",
-      "question": "Long answer question",
-      "answer": "Expected answer outline or key points",
-      "explanation": "Grading criteria or important points to include"
+      "question": "Discuss the causes and effects of climate change.",
+      "answer": "A comprehensive answer would include: greenhouse gas emissions, deforestation, industrial activities as causes; and rising temperatures, sea level rise, extreme weather events, and ecosystem disruption as effects.",
+      "explanation": "Students should demonstrate understanding of both human and natural factors contributing to climate change, as well as the wide-ranging environmental, social, and economic impacts."
     },
     {
       "id": "5",
@@ -393,7 +402,7 @@ Format your response as a JSON object with the following structure:
 
 Important formatting guidelines:
 1. Use proper markdown formatting for the question text
-2. For MCQs, provide exactly 4 options
+2. For MCQs, provide exactly 4 options with real content (not placeholders like "Option A", "Option B", etc.)
 3. For True/False, the answer should be either "True" or "False"
 4. For Short Answers, provide a concise expected answer
 5. For Long Answers, provide key points that should be included
@@ -439,6 +448,151 @@ const parseOpenAIResponse = (content: string, options: QuestionSetGenerationOpti
       return createDefaultQuestionSet(options);
     }
     
+    // Process the questions to fix any issues with options
+    const processedQuestions = parsedResponse.questions.map((q: any, index: number) => {
+      // Create a base question object
+      const question: Question = {
+        id: q.id || `${index + 1}`,
+        type: q.type || 'unknown',
+        question: q.question || '',
+        explanation: options.includeAnswers ? q.explanation || '' : undefined
+      };
+      
+      // Process MCQ options if they exist
+      if (q.type === 'mcq' && q.options && Array.isArray(q.options)) {
+        // Check if options are just placeholders like "Option A", "Option B", etc.
+        const optionPlaceholderPattern = /^Option [A-D]$/i;
+        const hasPlaceholderOptions = q.options.some((opt: string) => 
+          typeof opt === 'string' && optionPlaceholderPattern.test(opt.trim())
+        );
+        
+        if (hasPlaceholderOptions) {
+          console.warn(`Question ${index + 1} has placeholder options. Creating better options.`);
+          
+          // Try to extract real options from the question text or answer explanation
+          const questionText = q.question || '';
+          const explanation = q.explanation || '';
+          
+          // Look for patterns like "A. Paris", "B. London" in the question or explanation
+          const optionPattern = /([A-D])\s*[.)]\s*([^\n,;]+)/g;
+          const extractedOptions: string[] = [];
+          
+          // Try to find options in the question text
+          let match;
+          while ((match = optionPattern.exec(questionText)) !== null) {
+            const optionLetter = match[1];
+            const optionText = match[2].trim();
+            const optionIndex = optionLetter.charCodeAt(0) - 65; // Convert A->0, B->1, etc.
+            
+            if (optionIndex >= 0 && optionIndex < 4) {
+              extractedOptions[optionIndex] = optionText;
+            }
+          }
+          
+          // If we couldn't find options in the question, try the explanation
+          if (extractedOptions.length < 2 && explanation) {
+            optionPattern.lastIndex = 0; // Reset regex state
+            while ((match = optionPattern.exec(explanation)) !== null) {
+              const optionLetter = match[1];
+              const optionText = match[2].trim();
+              const optionIndex = optionLetter.charCodeAt(0) - 65; // Convert A->0, B->1, etc.
+              
+              if (optionIndex >= 0 && optionIndex < 4) {
+                extractedOptions[optionIndex] = optionText;
+              }
+            }
+          }
+          
+          // If we found at least 2 real options, use them
+          if (extractedOptions.filter(Boolean).length >= 2) {
+            // Fill in any missing options
+            for (let i = 0; i < 4; i++) {
+              if (!extractedOptions[i]) {
+                extractedOptions[i] = `Option ${String.fromCharCode(65 + i)}`;
+              }
+            }
+            question.options = extractedOptions;
+          } else {
+            // If we couldn't extract real options, use subject-specific placeholders
+            const subject = options.subject.toLowerCase();
+            
+            if (subject.includes('math') || subject.includes('mathematics')) {
+              question.options = [
+                'The correct numerical value',
+                'A value that is slightly off due to calculation error',
+                'A value derived from a common misconception',
+                'A completely unrelated value'
+              ];
+            } else if (subject.includes('science') || subject.includes('physics') || subject.includes('chemistry') || subject.includes('biology')) {
+              question.options = [
+                'The scientifically accurate answer',
+                'A common misconception about the topic',
+                'A partially correct but incomplete answer',
+                'An unrelated scientific concept'
+              ];
+            } else if (subject.includes('history') || subject.includes('social')) {
+              question.options = [
+                'The historically accurate answer',
+                'A related but incorrect historical fact',
+                'A common misconception about this historical period',
+                'An unrelated historical event'
+              ];
+            } else {
+              question.options = [
+                'The correct answer based on the material',
+                'A plausible but incorrect answer',
+                'A common misconception about the topic',
+                'An unrelated or obviously incorrect answer'
+              ];
+            }
+          }
+        } else {
+          // Options look good, use them as is
+          question.options = q.options;
+        }
+      } else if (q.options) {
+        // For non-MCQ questions that somehow have options
+        question.options = q.options;
+      }
+      
+      // Process the answer
+      if (options.includeAnswers) {
+        if (q.type === 'mcq' && question.options) {
+          // For MCQs, try to match the answer to one of the options
+          const answerText = q.answer || '';
+          
+          // Check if the answer is just a letter (A, B, C, D)
+          if (/^[A-D]$/i.test(answerText.trim())) {
+            // Convert letter to index (A->0, B->1, etc.)
+            const letterIndex = answerText.trim().toUpperCase().charCodeAt(0) - 65;
+            if (letterIndex >= 0 && letterIndex < question.options.length) {
+              question.answer = question.options[letterIndex];
+            } else {
+              question.answer = answerText;
+            }
+          } 
+          // Check if the answer is "Option X"
+          else if (/^Option [A-D]$/i.test(answerText.trim())) {
+            const letterIndex = answerText.trim().toUpperCase().charCodeAt(answerText.length - 1) - 65;
+            if (letterIndex >= 0 && letterIndex < question.options.length) {
+              question.answer = question.options[letterIndex];
+            } else {
+              question.answer = answerText;
+            }
+          }
+          // Otherwise use the answer as is
+          else {
+            question.answer = answerText;
+          }
+        } else {
+          // For non-MCQ questions, use the answer as is
+          question.answer = q.answer || '';
+        }
+      }
+      
+      return question;
+    });
+    
     // Create the QuestionSet object
     const questionSet: QuestionSet = {
       title: parsedResponse.title || `${options.subject} Question Set: ${options.chapters.join(', ')}`,
@@ -448,14 +602,7 @@ const parseOpenAIResponse = (content: string, options: QuestionSetGenerationOpti
       chapters: parsedResponse.chapters || options.chapters,
       difficulty: parsedResponse.difficulty || options.difficulty,
       includeAnswers: parsedResponse.includeAnswers !== undefined ? parsedResponse.includeAnswers : options.includeAnswers,
-      questions: parsedResponse.questions.map((q: any, index: number) => ({
-        id: q.id || `${index + 1}`,
-        type: q.type || 'unknown',
-        question: q.question || '',
-        options: q.options || undefined,
-        answer: options.includeAnswers ? q.answer || '' : undefined,
-        explanation: options.includeAnswers ? q.explanation || '' : undefined
-      })),
+      questions: processedQuestions,
       createdAt: new Date()
     };
     
@@ -549,10 +696,11 @@ export const deleteQuestionSet = async (questionSetId: string) => {
     // Update content stats if userId exists
     if (questionSetData.userId) {
       console.log(`Updating content stats for user ${questionSetData.userId}`);
+      const deletionDate = new Date();
       await updateContentStats(questionSetData.userId, {
         type: 'questionSets',
         operation: 'decrement'
-      });
+      }, deletionDate);
       console.log(`Content stats updated successfully`);
     }
     
