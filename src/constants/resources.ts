@@ -13,7 +13,12 @@ export const AVAILABLE_SUBJECTS = [
   'Biology',
   'History',
   'Geography',
-  'Political Science'
+  'Political Science',
+  'Social Science',
+  'Business Studies',
+  'Accounts',
+  'Accountancy',
+  'Informatics Practices'
 ];
 
 export const AVAILABLE_CHAPTERS = [
