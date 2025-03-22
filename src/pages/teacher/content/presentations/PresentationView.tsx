@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, Download, Copy } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Download } from 'lucide-react';
+import { generatePowerPointPresentation } from '../../../../services/presentationGenerator';
 import TeacherLayout from '../../../../components/teacher/TeacherLayout';
 import PresentationPreview from './components/PresentationPreview';
 import { getPresentation, deletePresentation } from '../../../../services/presentationFirebaseService';
@@ -96,15 +97,42 @@ export default function PresentationView({ isDarkMode, onThemeToggle }: Presenta
     }
   };
 
-  const handleDownload = () => {
-    // Download functionality
-    toast.error('Download functionality not implemented yet');
+  const handleDownload = async () => {
+    try {
+      if (!presentationData) {
+        toast.error('Presentation data not available');
+        return;
+      }
+      
+      // Validate presentation data structure
+      if (!presentationData.slides || !Array.isArray(presentationData.slides)) {
+        console.error('Invalid presentation structure:', presentationData);
+        toast.error('Invalid presentation structure');
+        return;
+      }
+      
+      // Show loading toast
+      const loadingToast = toast.loading('Generating PowerPoint presentation...');
+      
+      try {
+        // Generate and download the PowerPoint file
+        await generatePowerPointPresentation(presentationData);
+        
+        // Dismiss loading toast and show success message
+        toast.dismiss(loadingToast);
+        toast.success('PowerPoint presentation downloaded successfully');
+      } catch (error) {
+        // Dismiss loading toast on error
+        toast.dismiss(loadingToast);
+        throw error; // Re-throw to be caught by outer try-catch
+      }
+    } catch (error) {
+      console.error('Error generating PowerPoint:', error);
+      toast.error(`Failed to generate PowerPoint: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
-  const handleCopy = () => {
-    // Copy functionality
-    toast.error('Copy functionality not implemented yet');
-  };
+
 
   if (loading) {
     return (
@@ -176,13 +204,7 @@ export default function PresentationView({ isDarkMode, onThemeToggle }: Presenta
               Download
             </button>
             
-            <button
-              onClick={handleCopy}
-              className="inline-flex items-center justify-center px-2 sm:px-3 py-2 border border-gray-300 shadow-sm text-xs sm:text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-700"
-            >
-              <Copy className="h-4 w-4 mr-1 sm:mr-2" />
-              Copy
-            </button>
+
           </div>
         </div>
         

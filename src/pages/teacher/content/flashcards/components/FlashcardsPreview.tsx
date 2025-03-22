@@ -7,6 +7,13 @@ export default function FlashcardsPreview() {
   const [currentCard, setCurrentCard] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [viewMode, setViewMode] = useState<'single' | 'grid'>('single');
+  
+  // Add debugging to see what's happening with the flashcard data
+  console.log('FlashcardsPreview - flashcardSet:', flashcardSet);
+  console.log('FlashcardsPreview - flashcards array:', flashcardSet?.flashcards);
+  
+  // Validate flashcard data
+  const hasValidFlashcards = flashcardSet && Array.isArray(flashcardSet.flashcards) && flashcardSet.flashcards.length > 0;
 
   // If still generating, show loading state
   if (isGenerating) {
@@ -51,7 +58,7 @@ export default function FlashcardsPreview() {
   }
 
   // If no flashcard set is available, show empty state
-  if (!flashcardSet || !flashcardSet.flashcards) {
+  if (!hasValidFlashcards) {
     return (
       <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
         <div className="flex flex-col items-center justify-center py-12">
@@ -73,13 +80,17 @@ export default function FlashcardsPreview() {
   }
 
   const nextCard = () => {
-    setCurrentCard(prev => Math.min(prev + 1, flashcardSet.flashcards.length - 1));
-    setIsFlipped(false);
+    if (hasValidFlashcards) {
+      setCurrentCard(prev => Math.min(prev + 1, flashcardSet.flashcards.length - 1));
+      setIsFlipped(false);
+    }
   };
 
   const previousCard = () => {
-    setCurrentCard(prev => Math.max(prev - 1, 0));
-    setIsFlipped(false);
+    if (hasValidFlashcards) {
+      setCurrentCard(prev => Math.max(prev - 1, 0));
+      setIsFlipped(false);
+    }
   };
 
   return (
@@ -133,7 +144,7 @@ export default function FlashcardsPreview() {
                 <div className={`absolute inset-0 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-8 backface-hidden ${isFlipped ? 'invisible' : ''}`}>
                   <div className="flex flex-col items-center justify-center h-full">
                     <h3 className="text-xl font-medium text-gray-900 dark:text-white text-center">
-                      {flashcardSet.flashcards[currentCard].front}
+                      {hasValidFlashcards ? flashcardSet.flashcards[currentCard].front : 'No content available'}
                     </h3>
                     <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
                       Click to flip
@@ -145,7 +156,7 @@ export default function FlashcardsPreview() {
                 <div className={`absolute inset-0 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-8 backface-hidden rotate-y-180 ${!isFlipped ? 'invisible' : ''}`}>
                   <div className="flex flex-col items-center justify-center h-full">
                     <p className="text-lg text-gray-700 dark:text-gray-300 text-center whitespace-pre-line">
-                      {flashcardSet.flashcards[currentCard].back}
+                      {hasValidFlashcards ? flashcardSet.flashcards[currentCard].back : 'No content available'}
                     </p>
                     <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
                       Click to flip back
@@ -159,18 +170,18 @@ export default function FlashcardsPreview() {
             <div className="flex items-center justify-between">
               <button
                 onClick={previousCard}
-                disabled={currentCard === 0}
+                disabled={!hasValidFlashcards || currentCard === 0}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 disabled:opacity-50"
               >
                 <ChevronLeft className="w-5 h-5 mr-1" />
                 Previous
               </button>
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                Card {currentCard + 1} of {flashcardSet.flashcards.length}
+                Card {currentCard + 1} of {hasValidFlashcards ? flashcardSet.flashcards.length : 0}
               </span>
               <button
                 onClick={nextCard}
-                disabled={currentCard === flashcardSet.flashcards.length - 1}
+                disabled={!hasValidFlashcards || currentCard === (flashcardSet.flashcards.length - 1)}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 disabled:opacity-50"
               >
                 Next
@@ -181,7 +192,7 @@ export default function FlashcardsPreview() {
         ) : (
           // Grid View
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {flashcardSet.flashcards.map((card, index) => (
+            {hasValidFlashcards && flashcardSet.flashcards.map((card, index) => (
               <button
                 key={card.id}
                 onClick={() => {

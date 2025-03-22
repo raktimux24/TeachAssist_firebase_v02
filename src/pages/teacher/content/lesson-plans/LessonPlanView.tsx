@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import TeacherLayout from '../../../../components/teacher/TeacherLayout';
 import { getLessonPlanById, LessonPlan, LessonPlanSection } from '../../../../services/lessonPlanGeneration';
-import { ArrowLeft, Edit, Printer, Download, Clock, Book, Bookmark, Calendar } from 'lucide-react';
+import { generateLessonPlanDocument } from '../../../../services/documentGenerator';
+import { ArrowLeft, Edit, Download, Clock, Book, Bookmark, Calendar } from 'lucide-react';
 
 interface LessonPlanViewProps {
   isDarkMode: boolean;
@@ -63,8 +64,10 @@ export default function LessonPlanView({ isDarkMode, onThemeToggle }: LessonPlan
     return lessonPlan.sections.find(section => section.id === activeSection) || null;
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownload = () => {
+    if (lessonPlan) {
+      generateLessonPlanDocument(lessonPlan);
+    }
   };
 
   const handleEditClick = () => {
@@ -92,11 +95,11 @@ export default function LessonPlanView({ isDarkMode, onThemeToggle }: LessonPlan
           
           <div className="flex items-center space-x-2">
             <button
-              onClick={handlePrint}
+              onClick={handleDownload}
               className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-900"
             >
-              <Printer className="h-4 w-4 mr-1.5" />
-              Print
+              <Download className="h-4 w-4 mr-1.5" />
+              Download
             </button>
             <button
               onClick={handleEditClick}

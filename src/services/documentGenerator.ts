@@ -15,6 +15,22 @@ interface NotesData {
   sections: Section[];
 }
 
+interface LessonPlanSection {
+  id: string;
+  title: string;
+  content: string;
+}
+
+interface LessonPlanData {
+  title: string;
+  subject: string;
+  class: string;
+  book?: string;
+  numberOfClasses: number;
+  sections: LessonPlanSection[];
+  createdAt: Date;
+}
+
 export const generateDocument = async (notesData: NotesData) => {
   const doc = new Document({
     sections: [{
@@ -92,3 +108,62 @@ const getSectionColor = (type: string): string => {
       return '6B7280'; // gray-500
   }
 }; 
+
+export const generateLessonPlanDocument = async (lessonPlanData: LessonPlanData) => {
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      children: [
+        // Title
+        new Paragraph({
+          text: lessonPlanData.title,
+          heading: HeadingLevel.HEADING_1,
+          spacing: { after: 200 }
+        }),
+        
+        // Metadata
+        new Paragraph({
+          children: [
+            new TextRun({ text: `${lessonPlanData.subject} - ${lessonPlanData.class}`, bold: true }),
+            new TextRun({ text: lessonPlanData.book ? ` | ${lessonPlanData.book}` : '' }),
+            new TextRun({ text: ` | ${lessonPlanData.numberOfClasses} ${lessonPlanData.numberOfClasses > 1 ? 'Classes' : 'Class'}` })
+          ],
+          spacing: { after: 400 }
+        }),
+
+        // Sections
+        ...lessonPlanData.sections.flatMap(section => [
+          new Paragraph({
+            text: section.title,
+            heading: HeadingLevel.HEADING_2,
+            spacing: { before: 400, after: 200 }
+          }),
+          new Paragraph({
+            text: section.content,
+            spacing: { before: 100, after: 100 },
+            border: {
+              left: {
+                style: BorderStyle.SINGLE,
+                size: 8,
+                color: '6B7280', // gray-500
+              }
+            },
+            indent: { left: 360 } // 0.25 inch indent
+          })
+        ])
+      ]
+    }]
+  });
+
+  // Create download link and trigger download
+  Packer.toBlob(doc).then(blob => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${lessonPlanData.title.replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  });
+};
