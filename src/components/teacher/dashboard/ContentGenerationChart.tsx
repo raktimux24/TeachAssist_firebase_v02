@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { DashboardCard } from '../../shared/cards/DashboardCard';
 import { useAuth } from '../../../contexts/AuthContext';
-import { getDailyContentStats, testDailyContentStats } from '../../../services/dailyContentStatsService';
+import { getDailyContentStats } from '../../../services/dailyContentStatsService';
 import { ContentGenerationData, TimeRange } from '../../../types/dailyContentStats';
-import toast from 'react-hot-toast';
 
 // Chart colors for different content types
 const CHART_COLORS = {
@@ -26,27 +25,6 @@ export const ContentGenerationChart: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [noData, setNoData] = useState<boolean>(false);
 
-  // Function to generate test data for the current user
-  const generateTestData = async () => {
-    if (!currentUser?.uid) {
-      toast.error('You must be logged in to generate test data');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      toast.loading('Generating test data...');
-      await testDailyContentStats(currentUser.uid);
-      toast.success('Test data generated successfully!');
-      // Refetch the data after generating test data
-      fetchData();
-    } catch (error) {
-      console.error('Error generating test data:', error);
-      toast.error('Failed to generate test data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Function to fetch data from the database
   const fetchData = async () => {
@@ -134,12 +112,7 @@ export const ContentGenerationChart: React.FC = () => {
                   >
                     Retry
                   </button>
-                  <button
-                    onClick={generateTestData}
-                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                  >
-                    Generate Test Data
-                  </button>
+
                 </div>
               </div>
             </div>
@@ -147,13 +120,7 @@ export const ContentGenerationChart: React.FC = () => {
             <div className="h-full w-full flex flex-col items-center justify-center">
               <div className="text-gray-500 dark:text-gray-400 text-center">
                 <p>No content generation data available for this period.</p>
-                <p className="mt-2 text-sm">Generate test data or create some content to see statistics here.</p>
-                <button
-                  onClick={generateTestData}
-                  className="mt-4 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  Generate Test Data
-                </button>
+                <p className="mt-2 text-sm">Create some content to see statistics here.</p>
               </div>
             </div>
           ) : (

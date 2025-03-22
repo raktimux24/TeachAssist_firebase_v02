@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, Printer, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Download, Printer } from 'lucide-react';
 import { NotesSet, Note, saveNotesToFirestore } from '../../../../services/notesGeneration';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'react-hot-toast';
@@ -21,7 +21,6 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
   const { currentUser } = useAuth();
   const [notesSet, setNotesSet] = useState<NotesSet | null>(null);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -214,30 +213,7 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
     }
   };
 
-  const handleCopyToClipboard = () => {
-    if (!notesSet) return;
-    
-    // Create markdown content
-    let markdownContent = `# ${notesSet.title}\n\n`;
-    markdownContent += `Class: ${notesSet.class}\n`;
-    markdownContent += `Subject: ${notesSet.subject}\n`;
-    markdownContent += `Chapters: ${notesSet.chapters.join(', ')}\n\n`;
-    
-    notesSet.notes.forEach(note => {
-      markdownContent += `## ${note.title}\n\n${note.content}\n\n`;
-    });
-    
-    navigator.clipboard.writeText(markdownContent)
-      .then(() => {
-        setCopied(true);
-        toast.success('Notes copied to clipboard');
-        setTimeout(() => setCopied(false), 2000);
-      })
-      .catch(err => {
-        console.error('Failed to copy notes:', err);
-        toast.error('Failed to copy notes to clipboard');
-      });
-  };
+
 
   const getActiveNote = (): Note | null => {
     if (!notesSet || !activeNoteId) return null;
@@ -298,13 +274,6 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
         </div>
         
         <div className="flex space-x-2 mt-4 md:mt-0">
-          <button
-            onClick={handleCopyToClipboard}
-            className="flex items-center px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
-          >
-            {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
-            <span>{copied ? 'Copied' : 'Copy'}</span>
-          </button>
           <button
             onClick={handleDownload}
             className="flex items-center px-3 py-2 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
