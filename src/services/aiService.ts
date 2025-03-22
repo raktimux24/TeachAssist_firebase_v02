@@ -86,6 +86,9 @@ export const generateContent = async (
           if (isGeminiAvailable()) {
             console.log('Falling back to Gemini API...');
             try {
+              // Clear the error from console to avoid confusion
+              console.clear();
+              console.log('Using Gemini API due to OpenAI billing issues');
               return await generateWithGemini(systemPrompt, userPrompt);
             } catch (geminiError) {
               console.error('Gemini API fallback failed after OpenAI billing issue:', geminiError);
@@ -100,6 +103,9 @@ export const generateContent = async (
         if (isGeminiAvailable()) {
           console.log('Falling back to Gemini API for non-billing error...');
           try {
+            // Clear the error from console to avoid confusion
+            console.clear();
+            console.log('Using Gemini API due to OpenAI API errors');
             return await generateWithGemini(systemPrompt, userPrompt);
           } catch (geminiError) {
             console.error('Gemini API fallback also failed:', geminiError);
@@ -124,6 +130,9 @@ export const generateContent = async (
       if (isGeminiAvailable()) {
         console.log('Network error with OpenAI, falling back to Gemini API...');
         try {
+          // Clear the error from console to avoid confusion
+          console.clear();
+          console.log('Using Gemini API due to OpenAI network errors');
           return await generateWithGemini(systemPrompt, userPrompt);
         } catch (geminiError) {
           console.error('Gemini API fallback also failed:', geminiError);
@@ -153,6 +162,9 @@ export const generateContent = async (
       if (isGeminiAvailable() && !errorMessage.includes('Gemini API')) {
         console.log('Attempting Gemini API as fallback for billing issue...');
         try {
+          // Clear the error from console to avoid confusion
+          console.clear();
+          console.log('Using Gemini API due to OpenAI billing issues');
           return await generateWithGemini(systemPrompt, userPrompt);
         } catch (geminiError) {
           const geminiErrorMsg = geminiError instanceof Error ? geminiError.message : String(geminiError);
@@ -171,6 +183,9 @@ export const generateContent = async (
         isGeminiAvailable()) {
       console.log('Error with OpenAI, falling back to Gemini API...');
       try {
+        // Clear the error from console to avoid confusion
+        console.clear();
+        console.log('Using Gemini API due to OpenAI errors');
         return await generateWithGemini(systemPrompt, userPrompt);
       } catch (geminiError) {
         const geminiErrorMsg = geminiError instanceof Error ? geminiError.message : String(geminiError);

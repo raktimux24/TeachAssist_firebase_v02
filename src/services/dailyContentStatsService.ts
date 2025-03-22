@@ -250,7 +250,7 @@ export const updateDailyContentStats = async (
 
 /**
  * Get daily content stats for a specific time range
- * Currently returns hardcoded sample data for demonstration purposes
+ * Fetches actual data from Firebase based on the user's content generation activity
  */
 export const getDailyContentStats = async (
   userId: string,
@@ -259,39 +259,230 @@ export const getDailyContentStats = async (
   try {
     console.log('Getting daily content stats for user:', userId, 'days:', days);
     
-    // For now, always return sample data to ensure the chart works
-    console.log('Returning hardcoded sample data for chart visualization');
+    if (!userId) {
+      console.error('Cannot get daily stats: userId is empty or undefined');
+      throw new Error('User ID is required');
+    }
     
-    // Create sample data based on the time range
-    const sampleData: ContentGenerationData[] = [];
+    // Calculate the start date based on the requested time range
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999); // End of today
     
-    // Determine the interval based on the days
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0); // Start of the day 'days' ago
+    
+    console.log(`Fetching stats from ${startDate.toISOString()} to ${endDate.toISOString()}`);
+    
+    // Query Firestore for all daily stats documents within the date range for this user
+    const statsCollection = collection(db, DAILY_STATS_COLLECTION);
+    // We don't want to filter the query initially, as we need to check document IDs
+    const statsQuery = query(statsCollection);
+    const querySnapshot = await getDocs(statsQuery);
+    
+    console.log(`Total documents in collection: ${querySnapshot.size}`);
+    
+    // Process the documents to extract stats
+    const dailyStatsMap = new Map<string, {
+      lessonPlans: number;
+      questionSets: number;
+      presentations: number;
+      notes: number;
+      flashcards: number;
+      date: Date;
+    }>();
+    
+    // Debug: Log all document IDs to help diagnose issues
+    console.log('All document IDs:');
+    querySnapshot.forEach(doc => {
+      console.log(`- ${doc.id}`);
+    });
+    
+    // Filter documents by userId and date range
+    querySnapshot.forEach(doc => {
+      const data = doc.data();
+      console.log(`Processing document ${doc.id}:`, data);
+      
+      // Check if this document belongs to the current user
+      if (data.userId !== userId) {
+        console.log(`Skipping document ${doc.id} - wrong user ID: ${data.userId}`);
+        return;
+      }
+      
+      // Convert Firestore timestamp to Date
+      let docDate;
+      try {
+        if (data.date?.toDate) {
+          docDate = data.date.toDate();
+        } else if (data.date) {
+          docDate = new Date(data.date);
+        } else {
+          console.log(`Skipping document ${doc.id} - no date field`);
+          return;
+        }
+      } catch (error) {
+        console.error(`Error parsing date for document ${doc.id}:`, error);
+        return;
+      }
+      
+      console.log(`Document ${doc.id} date:`, docDate);
+      
+      // Check if the date is within our range
+      if (docDate >= startDate && docDate <= endDate) {
+        const dateKey = docDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        console.log(`Adding stats for ${dateKey}`);
+        
+        // If we already have stats for this date, merge them
+        const existingStats = dailyStatsMap.get(dateKey);
+        if (existingStats) {
+          console.log(`Merging with existing stats for ${dateKey}`);
+          dailyStatsMap.set(dateKey, {
+            lessonPlans: (existingStats.lessonPlans || 0) + (data.lessonPlans || 0),
+            questionSets: (existingStats.questionSets || 0) + (data.questionSets || 0),
+            presentations: (existingStats.presentations || 0) + (data.presentations || 0),
+            notes: (existingStats.notes || 0) + (data.notes || 0),
+            flashcards: (existingStats.flashcards || 0) + (data.flashcards || 0),
+            date: docDate
+          });
+        } else {
+          dailyStatsMap.set(dateKey, {
+            lessonPlans: data.lessonPlans || 0,
+            questionSets: data.questionSets || 0,
+            presentations: data.presentations || 0,
+            notes: data.notes || 0,
+            flashcards: data.flashcards || 0,
+            date: docDate
+          });
+        }
+      } else {
+        console.log(`Skipping document ${doc.id} - date out of range: ${docDate}`);
+      }
+    });
+    
+    console.log(`Found ${dailyStatsMap.size} days with stats data`);
+    
+    // Debug: Log all dates and their stats
+    console.log('Daily stats by date:');
+    for (const [dateKey, stats] of dailyStatsMap.entries()) {
+      console.log(`- ${dateKey}:`, stats);
+    }
+    
+    // If we have no data, return empty dataset
+    if (dailyStatsMap.size === 0) {
+      console.log('No stats data found for this time range');
+      return [];
+    }
+    
+    // For short time ranges (30 days or less), don't group data to show each day individually
+    if (days <= 30 && dailyStatsMap.size <= 30) {
+      console.log('Using daily data without grouping for short time range');
+      
+      // Convert the map directly to chart data format
+      const result = Array.from(dailyStatsMap.entries()).map(([dateKey, stats]) => {
+        const date = new Date(dateKey);
+        return {
+          name: `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })}`,
+          'Lesson Plans': stats.lessonPlans,
+          'Question Sets': stats.questionSets,
+          'Presentations': stats.presentations,
+          'Class Notes': stats.notes,
+          'Flash Cards': stats.flashcards
+        };
+      }).sort((a, b) => {
+        // Sort by date
+        const dateA = new Date(`${a.name} 2000`);
+        const dateB = new Date(`${b.name} 2000`);
+        return dateA.getTime() - dateB.getTime();
+      });
+      
+      console.log('Processed daily data for chart:', result);
+      return result;
+    }
+    
+    // For longer time ranges, group data by intervals
+    // Determine the interval for grouping data points based on the time range
     const interval = days <= 30 ? 5 : days <= 60 ? 10 : 15;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    console.log(`Grouping data with interval of ${interval} days`);
     
-    // Create date buckets based on the interval
-    for (let i = days; i >= 0; i -= interval) {
-      const bucketDate = new Date(today);
-      bucketDate.setDate(bucketDate.getDate() - i);
+    // Create a map to store data for each interval
+    const intervalGroups = new Map<string, ContentGenerationData>();
+    
+    // Create date buckets for each interval
+    for (let i = 0; i <= days; i += interval) {
+      const bucketDate = new Date(startDate);
+      bucketDate.setDate(bucketDate.getDate() + i);
       
-      // Generate some random data for this date
-      // Make more recent dates have higher values to show a trend
-      const progressFactor = 1 - (i / days); // 0 to 1, higher for more recent dates
-      const baseFactor = Math.max(0.5, progressFactor); // Ensure older dates still have some data
+      const bucketKey = `${bucketDate.getDate()} ${bucketDate.toLocaleString('default', { month: 'short' })}`;
       
-      sampleData.push({
-        name: `${bucketDate.getDate()} ${bucketDate.toLocaleString('default', { month: 'short' })}`,
-        'Lesson Plans': Math.floor(Math.random() * 3 * baseFactor + 1),
-        'Question Sets': Math.floor(Math.random() * 4 * baseFactor + 1),
-        'Presentations': Math.floor(Math.random() * 3 * baseFactor + 1),
-        'Class Notes': Math.floor(Math.random() * 5 * baseFactor + 1),
-        'Flash Cards': Math.floor(Math.random() * 4 * baseFactor + 1)
+      intervalGroups.set(bucketKey, {
+        name: bucketKey,
+        'Lesson Plans': 0,
+        'Question Sets': 0,
+        'Presentations': 0,
+        'Class Notes': 0,
+        'Flash Cards': 0
       });
     }
     
-    console.log('Generated sample data:', sampleData);
-    return sampleData;
+    // Distribute the actual data into the interval buckets
+    for (const [dateKey, stats] of dailyStatsMap.entries()) {
+      const date = new Date(dateKey);
+      
+      // Find the closest bucket for this date
+      let closestBucket = '';
+      let smallestDiff = Infinity;
+      
+      for (const bucketKey of intervalGroups.keys()) {
+        const bucketParts = bucketKey.split(' ');
+        const bucketDay = parseInt(bucketParts[0]);
+        const bucketMonth = new Date(`${bucketParts[1]} 1, 2000`).getMonth();
+        
+        const bucketDate = new Date(date);
+        bucketDate.setDate(bucketDay);
+        bucketDate.setMonth(bucketMonth);
+        
+        const diff = Math.abs(date.getTime() - bucketDate.getTime());
+        
+        if (diff < smallestDiff) {
+          smallestDiff = diff;
+          closestBucket = bucketKey;
+        }
+      }
+      
+      if (closestBucket && intervalGroups.has(closestBucket)) {
+        const bucket = intervalGroups.get(closestBucket)!;
+        console.log(`Adding stats from ${dateKey} to bucket ${closestBucket}`);
+        
+        // Add the stats to the bucket
+        bucket['Lesson Plans'] += stats.lessonPlans;
+        bucket['Question Sets'] += stats.questionSets;
+        bucket['Presentations'] += stats.presentations;
+        bucket['Class Notes'] += stats.notes;
+        bucket['Flash Cards'] += stats.flashcards;
+      }
+    }
+    
+    // Convert the map to an array and sort by date
+    const result = Array.from(intervalGroups.values())
+      .filter(bucket => {
+        // Only include buckets that have at least one non-zero value
+        return (
+          bucket['Lesson Plans'] > 0 ||
+          bucket['Question Sets'] > 0 ||
+          bucket['Presentations'] > 0 ||
+          bucket['Class Notes'] > 0 ||
+          bucket['Flash Cards'] > 0
+        );
+      })
+      .sort((a, b) => {
+        // Sort by date (assuming format is 'DD MMM')
+        const dateA = new Date(`${a.name} 2000`);
+        const dateB = new Date(`${b.name} 2000`);
+        return dateA.getTime() - dateB.getTime();
+      });
+    
+    console.log('Processed grouped data for chart:', result);
+    return result;
   } catch (error) {
     console.error('Error in getDailyContentStats:', error);
     if (error instanceof Error) {
@@ -411,32 +602,84 @@ export const checkDailyStatsCollection = async (): Promise<void> => {
 };
 
 /**
- * Test function to manually test daily content stats functionality
- * This can be called from the browser console to diagnose issues
+ * Test function to generate realistic test data for the content generation chart
+ * This creates data for the past 90 days with varying amounts of content generation
  */
 export const testDailyContentStats = async (userId: string): Promise<void> => {
   try {
-    console.log('=== TESTING DAILY CONTENT STATS ===');
-    console.log('Testing with userId:', userId);
+    console.log('=== GENERATING TEST DATA FOR CONTENT STATS ===');
+    console.log('Generating data for userId:', userId);
     
-    // Step 1: Initialize stats for today
+    // Generate data for the past 90 days
     const today = new Date();
-    console.log('Step 1: Initializing stats for today:', today.toISOString());
-    await initializeDailyStats(userId, today);
+    today.setHours(0, 0, 0, 0);
     
-    // Step 2: Update stats for notes
-    console.log('Step 2: Updating stats for notes');
-    await updateDailyContentStats(userId, {
-      type: 'notes',
-      operation: 'increment'
-    }, today);
+    // First, clear any existing test data for this user
+    console.log('Checking for existing data...');
     
-    // Step 3: Get daily stats
-    console.log('Step 3: Getting daily stats');
-    const stats = await getDailyContentStats(userId, 30);
-    console.log('Retrieved stats:', stats);
+    // Generate data for each day with some randomness to make it realistic
+    for (let i = 90; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      
+      // Initialize stats for this date
+      console.log(`Initializing stats for day -${i}:`, date.toISOString().split('T')[0]);
+      await initializeDailyStats(userId, date);
+      
+      // Generate random content based on day of week and recency
+      // More recent days have higher probability of content
+      // Weekdays have more content than weekends
+      const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const recencyFactor = Math.min(1, (90 - i) / 60); // 0 to 1, higher for more recent days
+      
+      // Base probability adjusted for weekends and recency
+      const baseProbability = isWeekend ? 0.3 : 0.6;
+      const adjustedProbability = baseProbability * (0.5 + recencyFactor * 0.5);
+      
+      // Generate random content with varying probabilities
+      const contentTypes = ['lessonPlans', 'questionSets', 'presentations', 'notes', 'flashcards'];
+      for (const type of contentTypes) {
+        // Different content types have different frequencies
+        let typeMultiplier = 1.0;
+        if (type === 'lessonPlans') typeMultiplier = 0.8;
+        if (type === 'questionSets') typeMultiplier = 1.2;
+        if (type === 'presentations') typeMultiplier = 0.7;
+        if (type === 'notes') typeMultiplier = 1.5;
+        if (type === 'flashcards') typeMultiplier = 0.9;
+        
+        // Calculate probability for this content type
+        const probability = adjustedProbability * typeMultiplier;
+        
+        // Determine if content was generated on this day
+        if (Math.random() < probability) {
+          // Generate 1-3 items of this type
+          const count = Math.floor(Math.random() * 3) + 1;
+          
+          // Update the stats for this content type
+          for (let j = 0; j < count; j++) {
+            await updateDailyContentStats(userId, {
+              type: type as any,
+              operation: 'increment'
+            }, date);
+          }
+          
+          console.log(`Generated ${count} ${type} for ${date.toISOString().split('T')[0]}`);
+        }
+      }
+    }
     
-    console.log('=== TEST COMPLETED SUCCESSFULLY ===');
+    // Verify the data was created
+    console.log('Verifying generated data...');
+    const stats30 = await getDailyContentStats(userId, 30);
+    const stats60 = await getDailyContentStats(userId, 60);
+    const stats90 = await getDailyContentStats(userId, 90);
+    
+    console.log('30-day stats count:', stats30.length);
+    console.log('60-day stats count:', stats60.length);
+    console.log('90-day stats count:', stats90.length);
+    
+    console.log('=== TEST DATA GENERATION COMPLETED SUCCESSFULLY ===');
     return;
   } catch (error) {
     console.error('=== TEST FAILED ===');
