@@ -8,6 +8,7 @@ import '../../../../styles/markdown.css';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../../firebase/config';
+import { generateDocument } from '../../../../services/documentGenerator';
 
 interface NotesResultsProps {
   isDarkMode: boolean;
@@ -45,6 +46,7 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
             
             // Create a NotesSet object from the document data
             const loadedNotesSet: NotesSet = {
+              id: docSnap.id, // Add the required id property
               title: data.title || '',
               subject: data.subject || '',
               class: data.class || '',
@@ -185,31 +187,31 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
     window.print();
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!notesSet) return;
     
-    // Create markdown content
-    let markdownContent = `# ${notesSet.title}\n\n`;
-    markdownContent += `Class: ${notesSet.class}\n`;
-    markdownContent += `Subject: ${notesSet.subject}\n`;
-    markdownContent += `Chapters: ${notesSet.chapters.join(', ')}\n\n`;
-    
-    notesSet.notes.forEach(note => {
-      markdownContent += `## ${note.title}\n\n${note.content}\n\n`;
-    });
-    
-    // Create a blob and download
-    const blob = new Blob([markdownContent], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${notesSet.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast.success('Notes downloaded successfully');
+    try {
+      // Format notes data for document generation
+      const notesData = {
+        title: notesSet.title,
+        subject: notesSet.subject,
+        class: notesSet.class,
+        type: notesSet.type || 'Class Notes',
+        layout: notesSet.layout === 'two-column' ? 'two-column' : 'one-column',
+        sections: notesSet.notes.map(note => ({
+          title: note.title,
+          content: note.content.split('\n').filter(line => line.trim() !== ''),
+          type: 'text' as 'text' | 'definition' | 'formula' | 'key-point' | 'summary'
+        }))
+      };
+      
+      // Use the document generator service to create and download a Word document
+      await generateDocument(notesData);
+      toast.success('Notes downloaded as Word document');
+    } catch (error) {
+      console.error('Error generating document:', error);
+      toast.error('Failed to download document. Please try again.');
+    }
   };
 
   const handleCopyToClipboard = () => {

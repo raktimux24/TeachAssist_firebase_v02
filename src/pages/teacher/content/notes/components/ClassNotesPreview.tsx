@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle, BookOpen, Layout, FileText, List } from 'lucide-react';
+import ClassNotesActions from './ClassNotesActions';
 
 interface Section {
   title: string;
@@ -7,7 +8,16 @@ interface Section {
   type: 'text' | 'definition' | 'formula' | 'key-point' | 'summary';
 }
 
-const mockNotes = {
+interface NotesData {
+  title: string;
+  subject: string;
+  class: string;
+  type: string;
+  layout: string;
+  sections: Section[];
+}
+
+const mockNotes: NotesData = {
   title: 'Chemical Bonding',
   subject: 'Chemistry',
   class: 'Class 11',
@@ -86,10 +96,13 @@ export default function ClassNotesPreview() {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
             {mockNotes.title}
           </h2>
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400">
-            <CheckCircle className="w-4 h-4 mr-1" />
-            Generated Successfully
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400">
+              <CheckCircle className="w-4 h-4 mr-1" />
+              Generated Successfully
+            </span>
+            <ClassNotesActions notesData={mockNotes} />
+          </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-500 dark:text-gray-400">
           <div className="flex items-center">

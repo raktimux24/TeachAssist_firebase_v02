@@ -8,6 +8,7 @@ import '../../../../styles/markdown.css';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../../firebase/config';
+import { generateDocument } from '../../../../services/documentGenerator';
 
 interface QuestionSetResultsProps {
   isDarkMode: boolean;
@@ -302,49 +303,75 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
     setShowAnswers(prev => !prev);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!questionSet) return;
     
-    // Create markdown content
-    let markdownContent = `# ${questionSet.title}\n\n`;
-    markdownContent += `Class: ${questionSet.class}\n`;
-    markdownContent += `Subject: ${questionSet.subject}\n`;
-    markdownContent += `Chapters: ${questionSet.chapters.join(', ')}\n`;
-    markdownContent += `Difficulty: ${questionSet.difficulty}\n\n`;
-    
-    questionSet.questions.forEach((question, index) => {
-      markdownContent += `## Question ${index + 1} (${question.type})\n\n`;
-      markdownContent += `${question.question}\n\n`;
+    try {
+      // Format question set data for document generation
+      const sections = [];
       
-      if (question.type === 'mcq' && question.options) {
-        question.options.forEach((option, optIndex) => {
-          markdownContent += `${String.fromCharCode(65 + optIndex)}. ${option}\n`;
-        });
-        markdownContent += '\n';
-      }
+      // Add metadata section
+      sections.push({
+        title: 'Question Set Information',
+        content: [
+          `Class: ${questionSet.class}`,
+          `Subject: ${questionSet.subject}`,
+          `Chapters: ${questionSet.chapters.join(', ')}`,
+          `Difficulty: ${questionSet.difficulty}`
+        ],
+        type: 'text' as const
+      });
       
-      if (questionSet.includeAnswers) {
-        markdownContent += `**Answer:** ${question.answer}\n\n`;
-        if (question.explanation) {
-          markdownContent += `**Explanation:** ${question.explanation}\n\n`;
+      // Add each question as a section
+      questionSet.questions.forEach((question, index) => {
+        const questionContent = [];
+        
+        // Add question text
+        questionContent.push(`${question.question}`);
+        
+        // Add options for MCQ questions
+        if (question.type === 'mcq' && question.options) {
+          question.options.forEach((option, optIndex) => {
+            questionContent.push(`${String.fromCharCode(65 + optIndex)}. ${option}`);
+          });
         }
-      }
+        
+        // Add answer and explanation if showAnswers is true (respecting the current toggle state)
+        if (showAnswers && question.answer) {
+          questionContent.push(`Answer: ${question.answer}`);
+          
+          if (question.explanation) {
+            questionContent.push(`Explanation: ${question.explanation}`);
+          }
+        }
+        
+        // Add the question section
+        sections.push({
+          title: `Question ${index + 1} (${question.type})`,
+          content: questionContent,
+          type: question.type === 'mcq' ? 'key-point' : 
+                question.type === 'true-false' ? 'definition' : 
+                question.type === 'short-answer' ? 'formula' : 'text'
+        } as const);
+      });
       
-      markdownContent += '---\n\n';
-    });
-    
-    // Create a blob and download
-    const blob = new Blob([markdownContent], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${questionSet.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast.success('Question set downloaded successfully');
+      // Create document data
+      const documentData = {
+        title: questionSet.title,
+        subject: questionSet.subject,
+        class: questionSet.class,
+        type: `Question Set (${questionSet.difficulty})`,
+        layout: 'one-column',
+        sections: sections
+      };
+      
+      // Use the document generator service to create and download a Word document
+      await generateDocument(documentData);
+      toast.success('Question set downloaded as Word document');
+    } catch (error) {
+      console.error('Error generating document:', error);
+      toast.error('Failed to download document. Please try again.');
+    }
   };
 
   const handleCopyToClipboard = () => {
