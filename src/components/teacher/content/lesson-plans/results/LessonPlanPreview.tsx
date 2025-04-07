@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { CheckCircle, Clock, Target, BookOpen, Users, AlertCircle } from 'lucide-react';
 import { LessonPlan } from '../../../../../services/lessonPlanGeneration';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import '../../../../../styles/markdown.css';
 
 export default function LessonPlanPreview() {
@@ -123,7 +126,12 @@ export default function LessonPlanPreview() {
             <div className="prose dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-700 dark:prose-p:text-gray-300 max-w-none">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{activeContent.title}</h2>
               <div className="markdown-content">
-                <ReactMarkdown>{activeContent.content}</ReactMarkdown>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw, rehypeSanitize]}
+                >
+                  {activeContent.content}
+                </ReactMarkdown>
               </div>
             </div>
           ) : (

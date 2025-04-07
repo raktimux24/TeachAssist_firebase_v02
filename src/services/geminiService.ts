@@ -25,10 +25,22 @@ export const generateWithGemini = async (
     console.log('Generating content with Gemini API');
     
     const genAI = getGeminiClient();
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-thinking-exp-01-21' });
     
-    // Add JSON formatting instructions to the system prompt
-    const enhancedSystemPrompt = `${systemPrompt}\n\nIMPORTANT: Your response MUST be in valid JSON format. Do not include any text outside of the JSON object. The JSON should include a 'title' field and a 'questions' array with each question having 'id', 'type', 'question', 'options' (for MCQs), 'answer', and 'explanation' fields.`;
+    // Detect if this is for notes generation or question sets
+    const isQuestionSet = userPrompt.includes('question set') || systemPrompt.includes('question set');
+    const isNotes = userPrompt.includes('class notes') || systemPrompt.includes('class notes');
+    
+    // Add appropriate JSON formatting instructions based on content type
+    let enhancedSystemPrompt = systemPrompt;
+    
+    if (isQuestionSet) {
+      enhancedSystemPrompt = `${systemPrompt}\n\nIMPORTANT: Your response MUST be in valid JSON format. Do not include any text outside of the JSON object. The JSON should include a 'title' field and a 'questions' array with each question having 'id', 'type', 'question', 'options' (for MCQs), 'answer', and 'explanation' fields.`;
+    } else if (isNotes) {
+      enhancedSystemPrompt = `${systemPrompt}\n\nIMPORTANT: Your response MUST be in valid JSON format. Do not include any text outside of the JSON object. The JSON should include 'title', 'subject', 'class', 'chapters', 'type', 'layout', and 'notes' fields. The 'notes' field should be an array of objects, each with 'id', 'title', and 'content' fields.`;
+    } else {
+      enhancedSystemPrompt = `${systemPrompt}\n\nIMPORTANT: Your response MUST be in valid JSON format. Do not include any text outside of the JSON object.`;
+    }
     
     // Combine system and user prompts for Gemini
     // Since Gemini doesn't have a separate system prompt concept like OpenAI
@@ -75,7 +87,53 @@ export const generateWithGemini = async (
           console.log('Successfully extracted JSON from Gemini response');
         } catch (extractError) {
           console.error('Failed to extract valid JSON from Gemini response');
+          
+          // If this is notes content and we still can't parse it, create a simple JSON structure
+          if (isNotes) {
+            console.log('Creating fallback JSON structure for notes');
+            const titleMatch = text.match(/title["']?\s*:\s*["']([^"']+)["']/);
+            const title = titleMatch ? titleMatch[1] : 'Generated Notes';
+            
+            // Create a simple JSON structure with the raw content
+            const subjectMatch = userPrompt.match(/subject:\s*([^\n]+)/);
+            const classMatch = userPrompt.match(/class:\s*([^\n]+)/);
+            
+            text = JSON.stringify({
+              title: title,
+              subject: subjectMatch ? subjectMatch[1] : '',
+              class: classMatch ? classMatch[1] : '',
+              chapters: [],
+              type: 'comprehensive',
+              layout: 'one-column',
+              notes: [{
+                id: '1',
+                title: 'Generated Content',
+                content: text.replace(/```/g, '').trim()
+              }]
+            });
+            console.log('Created fallback JSON structure for notes');
+          }
         }
+      } else if (isNotes) {
+        // If no JSON found and this is notes content, create a simple JSON structure
+        console.log('No JSON found, creating fallback JSON structure for notes');
+        const subjectMatch = userPrompt.match(/subject:\s*([^\n]+)/);
+        const classMatch = userPrompt.match(/class:\s*([^\n]+)/);
+        
+        text = JSON.stringify({
+          title: 'Generated Notes',
+          subject: subjectMatch ? subjectMatch[1] : '',
+          class: classMatch ? classMatch[1] : '',
+          chapters: [],
+          type: 'comprehensive',
+          layout: 'one-column',
+          notes: [{
+            id: '1',
+            title: 'Generated Content',
+            content: text.replace(/```/g, '').trim()
+          }]
+        });
+        console.log('Created fallback JSON structure for notes');
       }
     }
     

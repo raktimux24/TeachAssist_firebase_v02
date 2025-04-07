@@ -2,6 +2,7 @@ import { Resource } from '../types/resource';
 import { db } from '../firebase/config';
 import { collection, addDoc, serverTimestamp, DocumentReference, query, where, orderBy, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { updateContentStats } from './contentStatsService';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface Note {
   id: string;
@@ -324,6 +325,25 @@ const parseOpenAIResponse = (content: string, options: NotesGenerationOptions): 
           console.log('Successfully parsed JSON using regex extraction');
         } else {
           console.error('No JSON object found in the response');
+          
+          // If no JSON found, create a simple structure with the raw content
+          console.log('Creating fallback structure from raw content');
+          parsedContent = {
+            id: uuidv4(),
+            title: `${options.subject} - ${options.chapters.join(', ')} Notes`,
+            subject: options.subject,
+            class: options.class,
+            book: options.book,
+            chapters: options.chapters,
+            type: options.noteType,
+            layout: options.layout,
+            notes: [{
+              id: '1',
+              title: 'Generated Content',
+              content: content.replace(/```/g, '').trim()
+            }],
+            createdAt: new Date()
+          };
         }
       } catch (regexParseError) {
         console.error('Regex JSON parsing failed:', regexParseError);
@@ -452,17 +472,95 @@ const createDefaultNotesSet = (options: NotesGenerationOptions): NotesSet => {
 const getNoteTypeDescription = (noteType: string): string => {
   switch (noteType) {
     case 'bullet-points':
-      return 'Bullet Points - concise, easy-to-scan notes organized in bullet point format';
+      return `Bullet Points - Create concise, scannable notes using bullet point format for the selected book content:
+• Extract only information found within the provided book selection
+• Use short, focused phrases for each bullet point
+• Organize information into clear categories with main bullets and sub-bullets
+• Include only key facts, concepts, and terms from the text
+• Use consistent formatting with one main idea per bullet
+• Employ visual hierarchy with 2-3 levels maximum
+• Include white space between categories for improved readability
+• Bold important terms or concepts mentioned in the book
+• Focus on extracting core ideas from the selected content
+• Use simple ASCII diagrams where helpful to visualize key concepts from the book
+• Keep diagrams minimal and focused on essential relationships
+• Use consistent formatting and indentation for better readability
+• Use only keywords and phrases found in the book`;
     case 'outline':
-      return 'Outline Method - hierarchical structure with main topics and subtopics';
+      return `Outline Method - Create hierarchically structured notes based solely on the provided book selection:
+• Use Roman numerals for main topics or sections from the text
+• Use capital letters for subtopics mentioned in the selection
+• Use numbers for details under subtopics from the book
+• Use lowercase letters for further details from the text
+• Maintain consistent indentation to show relationships between levels
+• Include brief descriptive phrases based on the book's content
+• Ensure organization reflects the structure present in the selection
+• Create clear visual hierarchy through indentation and numbering
+• Preserve the logical flow presented in the selected text
+• Use only keywords and phrases found in the book
+• Include basic ASCII diagrams when needed to represent hierarchical relationships or processes described in the text`;
     case 'detailed':
-      return 'Detailed Notes - comprehensive notes with full explanations and examples';
+      return `Detailed Notes - Create comprehensive notes with complete explanations from the selected book content:
+• Use section headings that mirror the book's organization
+• Include thorough explanations of concepts presented in the text
+• Provide examples mentioned in the book selection
+• Explain relationships between ideas as described in the text
+• Include definitions, formulas, and terminology from the selection
+• Incorporate any visual elements referenced in the book
+• Add clarifying information presented in the selection
+• Use transitional language that follows the book's flow
+• Include applications or contexts mentioned in the text
+• Note any exceptions or limitations discussed in the selection
+• Maintain the tone and terminology used in the book
+• Focus only on content explicitly provided in the selection
+• Create ASCII diagrams to visualize complex concepts, processes, or relationships presented in the book
+• Ensure diagrams accurately represent information found in the text
+• Label all elements of the diagram using terminology from the book
+• Add brief explanations beneath diagrams to clarify their meaning
+• Use only keywords and phrases found in the book
+• Use consistent formatting and indentation for better readability`;
     case 'important-qa':
-      return 'Important Questions & Definitions - focused on key questions and term definitions';
+      return `Important Questions & Definitions - Create focused notes centered on key questions and definitions from the selected book content:
+• Format based only on information presented in the text
+• For Questions:
+  - Develop questions that can be answered from the selection
+  - Provide answers using only information in the text
+  - Organize questions following the book's structure
+  - Include conceptual questions about material in the selection
+• For Definitions:
+  - Extract terms and definitions explicitly mentioned in the book
+  - Arrange terms following the order they appear in the text
+  - Include examples of terms as presented in the selection
+  - Note relationships between terms as described in the book
+  - Clarify distinctions between terms as explained in the text
+  - Bold all defined terms for easy scanning
+  - Include ASCII diagrams where they help clarify definitions or answer questions based on the text
+  - Ensure diagrams directly support understanding of specific terms or concepts from the book`;
     case 'theorems-formulas':
-      return 'Theorems & Formulas - emphasis on mathematical theorems, formulas, and their applications';
+      return `Theorems & Formulas - Create STEM-focused notes emphasizing theorems, formulas, and applications from the selected book content:
+• Format theorems and laws exactly as presented in the text
+• Present formulas using the notation found in the book
+• Include any derivations provided in the selection
+• Add explanatory notes about applications as described in the text
+• Provide examples exactly as shown in the book
+• Include variations and special cases mentioned in the selection
+• Note any constraints or limitations discussed in the text
+• Organize related concepts following the book's structure
+• Include any visual representations referenced in the selection
+• Maintain all units of measurement as presented in the book
+• Note connections between concepts as explained in the text
+• Include any experimental or practical aspects mentioned
+• Preserve any historical context provided in the selection
+• Focus exclusively on theorems, formulas, and principles from the book
+• Use ASCII diagrams to illustrate applications of theorems or formulas mentioned in the book
+• Create visual representations of mathematical concepts, scientific processes, or engineering principles from the text
+• Include coordinate systems, graphs, circuit diagrams, or other visual aids as appropriate
+• Ensure all diagram elements are properly labeled using the book's terminology
+• Position diagrams near the relevant theorems or formulas they illustrate
+• Use only keywords and phrases found in the book
+• Use consistent formatting and indentation for better readability`;
     default:
-      return 'Standard notes format';
+      return 'Standard notes format focusing exclusively on content from the selected book';
   }
 };
 

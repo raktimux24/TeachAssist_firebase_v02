@@ -3,6 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Download, Printer } from 'lucide-react';
 import { NotesSet, Note, saveNotesToFirestore } from '../../../../services/notesGeneration';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import { toast } from 'react-hot-toast';
 import '../../../../styles/markdown.css';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -323,7 +326,12 @@ export default function NotesResults({ isDarkMode, noteId }: NotesResultsProps) 
               <div className="prose dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-700 dark:prose-p:text-gray-300 max-w-none">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{activeNote.title}</h2>
                 <div className="markdown-content">
-                  <ReactMarkdown>{activeNote.content}</ReactMarkdown>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeRaw, rehypeSanitize]}
+                  >
+                    {activeNote.content}
+                  </ReactMarkdown>
                 </div>
               </div>
             ) : (

@@ -3,6 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Download, Printer, Copy, Check } from 'lucide-react';
 import { QuestionSet, saveQuestionSetToFirestore } from '../../../../services/questionSetGeneration';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import { toast } from 'react-hot-toast';
 import '../../../../styles/markdown.css';
 import { useAuth } from '../../../../contexts/AuthContext';
@@ -528,7 +531,7 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
             </div>
             
             <div className="prose dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-primary-600 dark:prose-p:text-white max-w-none mb-4">
-              <ReactMarkdown>{question.question}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]}>{question.question}</ReactMarkdown>
             </div>
             
             {question.type === 'mcq' && (
@@ -598,14 +601,14 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
               <div className="mt-4 p-4 bg-primary-400/10 dark:bg-primary-700/20 rounded-lg border border-primary-400/30 dark:border-primary-700/50">
                 <h3 className="font-semibold text-primary-700 dark:text-white mb-2">Answer</h3>
                 <div className="text-primary-600 dark:text-white">
-                  <ReactMarkdown>{question.answer}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]}>{question.answer}</ReactMarkdown>
                 </div>
                 
                 {question.explanation && (
                   <div className="mt-2 pt-2 border-t border-primary-400/30 dark:border-primary-700/50">
                     <h3 className="font-semibold text-primary-700 dark:text-white mb-1">Explanation</h3>
                     <div className="text-primary-600 dark:text-white">
-                      <ReactMarkdown>{question.explanation}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]}>{question.explanation}</ReactMarkdown>
                     </div>
                   </div>
                 )}
@@ -655,7 +658,7 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
                           }
                           
                           // Default: just show the answer as is
-                          return <ReactMarkdown>{question.answer}</ReactMarkdown>;
+                          return <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]}>{question.answer}</ReactMarkdown>;
                         })()}
                       </div>
                     </div>
@@ -667,7 +670,7 @@ export default function QuestionSetResults({ isDarkMode, questionSetId }: Questi
                   <>
                     <h3 className="font-semibold text-primary-700 dark:text-white mb-2">Explanation</h3>
                     <div className="text-primary-600 dark:text-white">
-                      <ReactMarkdown>{question.explanation}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]}>{question.explanation}</ReactMarkdown>
                     </div>
                   </>
                 )}

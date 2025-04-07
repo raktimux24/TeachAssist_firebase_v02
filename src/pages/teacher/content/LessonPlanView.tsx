@@ -3,6 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import TeacherLayout from '../../../components/teacher/TeacherLayout';
 import { getLessonPlanById, LessonPlan, LessonPlanSection } from '../../../services/lessonPlanGeneration';
 import { ArrowLeft, Edit, Printer, Download, Clock, Book, Bookmark, Calendar } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
+import '../../../styles/markdown.css';
 
 interface LessonPlanViewProps {
   isDarkMode: boolean;
@@ -223,10 +228,14 @@ export default function LessonPlanView({ isDarkMode, onThemeToggle }: LessonPlan
                       {getActiveSectionContent()?.title}
                     </h2>
                     <div className="prose dark:prose-invert prose-sm sm:prose-base max-w-none">
-                      <div 
-                        className="whitespace-pre-line text-gray-700 dark:text-gray-300"
-                        dangerouslySetInnerHTML={{ __html: getActiveSectionContent()?.content.replace(/\n/g, '<br />') || '' }}
-                      />
+                      <div className="markdown-content" data-component-name="LessonPlanView">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeRaw, rehypeSanitize]}
+                        >
+                          {getActiveSectionContent()?.content || ''}
+                        </ReactMarkdown>
+                      </div>
                     </div>
                   </div>
                 )}
