@@ -112,6 +112,53 @@ export const generateWithGemini = async (
               }]
             });
             console.log('Created fallback JSON structure for notes');
+          } else if (isQuestionSet) {
+            console.log('Creating fallback JSON structure for question set');
+            const titleMatch = text.match(/title["']?\s*:\s*["']([^"']+)["']/);
+            const title = titleMatch ? titleMatch[1] : 'Generated Question Set';
+            
+            // Extract subject and class from the user prompt
+            const subjectMatch = userPrompt.match(/subject:\s*([^\n]+)/);
+            const classMatch = userPrompt.match(/class:\s*([^\n]+)/);
+            
+            // Try to extract questions from the raw text
+            const questions = [];
+            
+            // Look for numbered questions (e.g., "1. What is...", "Question 1: What is...")
+            const questionMatches = text.match(/(?:^|\n)(?:Question\s*)?\d+[.:]\s*([^\n]+)/g) || [];
+            
+            if (questionMatches.length > 0) {
+              questionMatches.forEach((q, index) => {
+                const questionText = q.replace(/(?:^|\n)(?:Question\s*)?\d+[.:]\s*/, '').trim();
+                questions.push({
+                  id: (index + 1).toString(),
+                  type: 'short_answer',
+                  question: questionText,
+                  answer: 'Answer not available',
+                  explanation: 'Explanation not available'
+                });
+              });
+            } else {
+              // If no questions found, create a default question
+              questions.push({
+                id: '1',
+                type: 'short_answer',
+                question: 'Default question',
+                answer: 'Answer not available',
+                explanation: 'Explanation not available'
+              });
+            }
+            
+            text = JSON.stringify({
+              title: title,
+              subject: subjectMatch ? subjectMatch[1] : '',
+              class: classMatch ? classMatch[1] : '',
+              chapters: [],
+              difficulty: 'medium',
+              includeAnswers: true,
+              questions: questions
+            });
+            console.log('Created fallback JSON structure for question set');
           }
         }
       } else if (isNotes) {
@@ -134,6 +181,50 @@ export const generateWithGemini = async (
           }]
         });
         console.log('Created fallback JSON structure for notes');
+      } else if (isQuestionSet) {
+        // If no JSON found and this is question set content, create a simple JSON structure
+        console.log('No JSON found, creating fallback JSON structure for question set');
+        const subjectMatch = userPrompt.match(/subject:\s*([^\n]+)/);
+        const classMatch = userPrompt.match(/class:\s*([^\n]+)/);
+        
+        // Try to extract questions from the raw text
+        const questions = [];
+        
+        // Look for numbered questions (e.g., "1. What is...", "Question 1: What is...")
+        const questionMatches = text.match(/(?:^|\n)(?:Question\s*)?\d+[.:]\s*([^\n]+)/g) || [];
+        
+        if (questionMatches.length > 0) {
+          questionMatches.forEach((q, index) => {
+            const questionText = q.replace(/(?:^|\n)(?:Question\s*)?\d+[.:]\s*/, '').trim();
+            questions.push({
+              id: (index + 1).toString(),
+              type: 'short_answer',
+              question: questionText,
+              answer: 'Answer not available',
+              explanation: 'Explanation not available'
+            });
+          });
+        } else {
+          // If no questions found, create a default question
+          questions.push({
+            id: '1',
+            type: 'short_answer',
+            question: 'Default question',
+            answer: 'Answer not available',
+            explanation: 'Explanation not available'
+          });
+        }
+        
+        text = JSON.stringify({
+          title: 'Generated Question Set',
+          subject: subjectMatch ? subjectMatch[1] : '',
+          class: classMatch ? classMatch[1] : '',
+          chapters: [],
+          difficulty: 'medium',
+          includeAnswers: true,
+          questions: questions
+        });
+        console.log('Created fallback JSON structure for question set');
       }
     }
     

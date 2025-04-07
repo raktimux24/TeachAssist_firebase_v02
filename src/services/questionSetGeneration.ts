@@ -439,8 +439,32 @@ Please ensure the questions are relevant to the chapters specified and appropria
  */
 const parseOpenAIResponse = (content: string, options: QuestionSetGenerationOptions): QuestionSet => {
   try {
-    // Try to parse the response as JSON
-    const parsedResponse = JSON.parse(content);
+    // Try to parse the JSON response
+    let parsedResponse: any = null;
+    
+    // First try direct JSON parsing
+    try {
+      parsedResponse = JSON.parse(content);
+      console.log('Successfully parsed JSON directly');
+    } catch (directParseError) {
+      console.error('Direct JSON parsing failed:', directParseError);
+      
+      // Try to extract JSON from the response using regex
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const jsonContent = jsonMatch[0];
+          parsedResponse = JSON.parse(jsonContent);
+          console.log('Successfully parsed JSON using regex extraction');
+        } else {
+          console.error('No JSON object found in the response');
+          return createDefaultQuestionSet(options);
+        }
+      } catch (regexParseError) {
+        console.error('Regex JSON parsing failed:', regexParseError);
+        return createDefaultQuestionSet(options);
+      }
+    }
     
     // Validate the response has the expected structure
     if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
