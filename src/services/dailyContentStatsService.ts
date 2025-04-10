@@ -13,6 +13,44 @@ import {
 import { db } from '../firebase/config';
 import { ContentGenerationData, TimeRange } from '../types/dailyContentStats';
 import { ContentStatsUpdate } from '../types/contentStats';
+import { getLocalDailyContentStats } from './localContentStatsService';
+
+// Check if an error is a Firebase permission error
+const isPermissionError = (error: any): boolean => {
+  return (
+    error?.code === 'permission-denied' ||
+    error?.name === 'FirebaseError' && error?.message?.includes('permission') ||
+    error?.message?.includes('Missing or insufficient permissions')
+  );
+};
+
+/**
+ * Format data for chart display
+ * Converts our internal data format to the format expected by the chart component
+ */
+const formatDataForChart = (data: ContentGenerationData[]): ContentGenerationData[] => {
+  return data.map(item => {
+    // Format date for display (e.g., "21 Mar")
+    const dateObj = item.date instanceof Date ? item.date : new Date(item.date);
+    const day = dateObj.getDate();
+    const month = dateObj.toLocaleString('default', { month: 'short' });
+    
+    return {
+      date: dateObj,
+      name: `${day} ${month}`,
+      notes: item.notes || 0,
+      flashcards: item.flashcards || 0,
+      questionSets: item.questionSets || 0,
+      lessonPlans: item.lessonPlans || 0,
+      presentations: item.presentations || 0,
+      'Lesson Plans': item.lessonPlans || 0,
+      'Question Sets': item.questionSets || 0,
+      'Presentations': item.presentations || 0,
+      'Class Notes': item.notes || 0,
+      'Flash Cards': item.flashcards || 0
+    };
+  });
+};
 
 const DAILY_STATS_COLLECTION = 'dailyContentStats';
 
@@ -256,6 +294,17 @@ export const getDailyContentStats = async (
   userId: string,
   days: TimeRange
 ): Promise<ContentGenerationData[]> => {
+  // First try to get data from local storage as it's faster
+  try {
+    const localData = getLocalDailyContentStats(userId, days);
+    if (localData && localData.length > 0) {
+      console.log('Using cached daily content stats from local storage');
+      return formatDataForChart(localData);
+    }
+  } catch (localError) {
+    console.warn('Error getting local daily content stats:', localError);
+    // Continue to try Firestore
+  }
   try {
     console.log('Getting daily content stats for user:', userId, 'days:', days);
     
@@ -381,12 +430,18 @@ export const getDailyContentStats = async (
       const result = Array.from(dailyStatsMap.entries()).map(([dateKey, stats]) => {
         const date = new Date(dateKey);
         return {
+          date: date,
           name: `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })}`,
-          'Lesson Plans': stats.lessonPlans,
-          'Question Sets': stats.questionSets,
-          'Presentations': stats.presentations,
-          'Class Notes': stats.notes,
-          'Flash Cards': stats.flashcards
+          notes: stats.notes || 0,
+          flashcards: stats.flashcards || 0,
+          questionSets: stats.questionSets || 0,
+          lessonPlans: stats.lessonPlans || 0,
+          presentations: stats.presentations || 0,
+          'Lesson Plans': stats.lessonPlans || 0,
+          'Question Sets': stats.questionSets || 0,
+          'Presentations': stats.presentations || 0,
+          'Class Notes': stats.notes || 0,
+          'Flash Cards': stats.flashcards || 0
         };
       }).sort((a, b) => {
         // Sort by date
@@ -415,7 +470,13 @@ export const getDailyContentStats = async (
       const bucketKey = `${bucketDate.getDate()} ${bucketDate.toLocaleString('default', { month: 'short' })}`;
       
       intervalGroups.set(bucketKey, {
+        date: bucketDate,
         name: bucketKey,
+        notes: 0,
+        flashcards: 0,
+        questionSets: 0,
+        lessonPlans: 0,
+        presentations: 0,
         'Lesson Plans': 0,
         'Question Sets': 0,
         'Presentations': 0,
@@ -426,39 +487,77 @@ export const getDailyContentStats = async (
     
     // Distribute the actual data into the interval buckets
     for (const [dateKey, stats] of dailyStatsMap.entries()) {
-      const date = new Date(dateKey);
-      
-      // Find the closest bucket for this date
-      let closestBucket = '';
-      let smallestDiff = Infinity;
-      
-      for (const bucketKey of intervalGroups.keys()) {
-        const bucketParts = bucketKey.split(' ');
-        const bucketDay = parseInt(bucketParts[0]);
-        const bucketMonth = new Date(`${bucketParts[1]} 1, 2000`).getMonth();
+      try {
+        const date = new Date(dateKey);
         
-        const bucketDate = new Date(date);
-        bucketDate.setDate(bucketDay);
-        bucketDate.setMonth(bucketMonth);
+        // Find the closest bucket for this date
+        let closestBucket: string | null = null;
+        let smallestDiff = Infinity;
         
-        const diff = Math.abs(date.getTime() - bucketDate.getTime());
+        // Safely iterate through all bucket keys
+        Array.from(intervalGroups.keys()).forEach(bucketKey => {
+          if (typeof bucketKey !== 'string' || !bucketKey) return;
+          
+          try {
+            const bucketParts = bucketKey.split(' ');
+            if (bucketParts.length < 2) return;
+            
+            // Parse the day with a safe fallback
+            const dayStr = bucketParts[0] || '';
+            const bucketDay = Number.isNaN(parseInt(dayStr)) ? 1 : parseInt(dayStr);
+            
+            // Safely get the month
+            const monthName = bucketParts[1] || 'January';
+            let bucketMonth = 0; // Default to January
+            
+            try {
+              const monthDate = new Date(`${monthName} 1, 2000`);
+              if (!isNaN(monthDate.getTime())) {
+                bucketMonth = monthDate.getMonth();
+              }
+            } catch (e) {
+              console.warn(`Invalid month name: ${monthName}, using January`);
+            }
+            
+            // Create a new date based on the bucket info
+            const bucketDate = new Date(date.getTime()); // Clone the date
+            bucketDate.setDate(bucketDay);
+            bucketDate.setMonth(bucketMonth);
+            
+            const diff = Math.abs(date.getTime() - bucketDate.getTime());
+            
+            if (diff < smallestDiff) {
+              smallestDiff = diff;
+              closestBucket = bucketKey;
+            }
+          } catch (err) {
+            console.warn(`Error processing bucket ${bucketKey}:`, err);
+          }
+        });
         
-        if (diff < smallestDiff) {
-          smallestDiff = diff;
-          closestBucket = bucketKey;
+        // Only proceed if we found a valid bucket and it exists in our map
+        if (closestBucket && intervalGroups.has(closestBucket)) {
+          const bucket = intervalGroups.get(closestBucket);
+          if (bucket) {
+            console.log(`Adding stats from ${dateKey} to bucket ${closestBucket}`);
+            
+            // Add the stats to the bucket with safe defaults
+            bucket.lessonPlans += stats?.lessonPlans || 0;
+            bucket.questionSets += stats?.questionSets || 0;
+            bucket.presentations += stats?.presentations || 0;
+            bucket.notes += stats?.notes || 0;
+            bucket.flashcards += stats?.flashcards || 0;
+            
+            // Use type assertion or optional chaining with nullish coalescing to fix TypeScript errors
+            bucket['Lesson Plans'] = (bucket['Lesson Plans'] || 0) + (stats?.lessonPlans || 0);
+            bucket['Question Sets'] = (bucket['Question Sets'] || 0) + (stats?.questionSets || 0);
+            bucket['Presentations'] = (bucket['Presentations'] || 0) + (stats?.presentations || 0);
+            bucket['Class Notes'] = (bucket['Class Notes'] || 0) + (stats?.notes || 0);
+            bucket['Flash Cards'] = (bucket['Flash Cards'] || 0) + (stats?.flashcards || 0);
         }
       }
-      
-      if (closestBucket && intervalGroups.has(closestBucket)) {
-        const bucket = intervalGroups.get(closestBucket)!;
-        console.log(`Adding stats from ${dateKey} to bucket ${closestBucket}`);
-        
-        // Add the stats to the bucket
-        bucket['Lesson Plans'] += stats.lessonPlans;
-        bucket['Question Sets'] += stats.questionSets;
-        bucket['Presentations'] += stats.presentations;
-        bucket['Class Notes'] += stats.notes;
-        bucket['Flash Cards'] += stats.flashcards;
+      } catch (error) {
+        console.error(`Error processing stats for date ${dateKey}:`, error);
       }
     }
     
@@ -467,11 +566,11 @@ export const getDailyContentStats = async (
       .filter(bucket => {
         // Only include buckets that have at least one non-zero value
         return (
-          bucket['Lesson Plans'] > 0 ||
-          bucket['Question Sets'] > 0 ||
-          bucket['Presentations'] > 0 ||
-          bucket['Class Notes'] > 0 ||
-          bucket['Flash Cards'] > 0
+          (bucket.lessonPlans || 0) > 0 ||
+          (bucket.questionSets || 0) > 0 ||
+          (bucket.presentations || 0) > 0 ||
+          (bucket.notes || 0) > 0 ||
+          (bucket.flashcards || 0) > 0
         );
       })
       .sort((a, b) => {
@@ -484,20 +583,34 @@ export const getDailyContentStats = async (
     console.log('Processed grouped data for chart:', result);
     return result;
   } catch (error) {
-    console.error('Error in getDailyContentStats:', error);
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
+    // If it's a permission error, try to get data from local storage
+    if (isPermissionError(error)) {
+      console.warn('Permission error getting daily stats, falling back to local storage');
+      try {
+        const localData = getLocalDailyContentStats(userId, days);
+        if (localData && localData.length > 0) {
+          console.log('Successfully retrieved daily stats from local storage');
+          return formatDataForChart(localData);
+        }
+      } catch (localError) {
+        console.warn('Error getting local daily content stats as fallback');
+      }
+    } else {
+      // Only log detailed errors for non-permission errors
+      console.error('Error in getDailyContentStats:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          message: error.message,
+          name: error.name
+        });
+      }
     }
     
     // Try to return empty data first, then fall back to sample data if needed
     try {
       return generateEmptyDataSet(days);
     } catch (innerError) {
-      console.error('Error generating empty data set, falling back to sample data:', innerError);
+      console.warn('Error generating empty data set, falling back to sample data');
       return generateSampleDataSet(days);
     }
   }
@@ -507,7 +620,7 @@ export const getDailyContentStats = async (
  * Generate an empty data set for the chart when there's an error
  * This prevents the UI from breaking when data can't be fetched
  */
-const generateEmptyDataSet = (days: TimeRange): ContentGenerationData[] => {
+function generateEmptyDataSet(days: TimeRange): ContentGenerationData[] {
   const result: ContentGenerationData[] = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -521,7 +634,13 @@ const generateEmptyDataSet = (days: TimeRange): ContentGenerationData[] => {
     bucketDate.setDate(bucketDate.getDate() - i);
     
     result.push({
+      date: bucketDate,
       name: `${bucketDate.getDate()} ${bucketDate.toLocaleString('default', { month: 'short' })}`,
+      notes: 0,
+      flashcards: 0,
+      questionSets: 0,
+      lessonPlans: 0,
+      presentations: 0,
       'Lesson Plans': 0,
       'Question Sets': 0,
       'Presentations': 0,
@@ -537,7 +656,7 @@ const generateEmptyDataSet = (days: TimeRange): ContentGenerationData[] => {
  * Generate sample data for the chart when no real data is available
  * This is used for testing and development purposes
  */
-const generateSampleDataSet = (days: TimeRange): ContentGenerationData[] => {
+function generateSampleDataSet(days: TimeRange): ContentGenerationData[] {
   const result: ContentGenerationData[] = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -555,13 +674,25 @@ const generateSampleDataSet = (days: TimeRange): ContentGenerationData[] => {
     const factor = 1 - (i / days); // 0 to 1, higher for more recent dates
     const baseValue = Math.floor(factor * 5);
     
+    const lessonPlans = Math.max(0, baseValue + Math.floor(Math.random() * 3));
+    const questionSets = Math.max(0, baseValue + Math.floor(Math.random() * 3));
+    const presentations = Math.max(0, baseValue + Math.floor(Math.random() * 3));
+    const notes = Math.max(0, baseValue + Math.floor(Math.random() * 3));
+    const flashcards = Math.max(0, baseValue + Math.floor(Math.random() * 3));
+    
     result.push({
+      date: bucketDate,
       name: `${bucketDate.getDate()} ${bucketDate.toLocaleString('default', { month: 'short' })}`,
-      'Lesson Plans': Math.max(0, baseValue + Math.floor(Math.random() * 3)),
-      'Question Sets': Math.max(0, baseValue + Math.floor(Math.random() * 3)),
-      'Presentations': Math.max(0, baseValue + Math.floor(Math.random() * 3)),
-      'Class Notes': Math.max(0, baseValue + Math.floor(Math.random() * 3)),
-      'Flash Cards': Math.max(0, baseValue + Math.floor(Math.random() * 3))
+      notes: notes,
+      flashcards: flashcards,
+      questionSets: questionSets,
+      lessonPlans: lessonPlans,
+      presentations: presentations,
+      'Lesson Plans': lessonPlans,
+      'Question Sets': questionSets,
+      'Presentations': presentations,
+      'Class Notes': notes,
+      'Flash Cards': flashcards
     });
   }
   

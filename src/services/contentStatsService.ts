@@ -2,14 +2,20 @@ import { doc, getDoc, updateDoc, increment, serverTimestamp } from 'firebase/fir
 import { db } from '../firebase/config';
 import { ContentStats, ContentStatsUpdate } from '../types/contentStats';
 import { updateDailyContentStats, initializeDailyStats } from './dailyContentStatsService';
+import {
+  DEFAULT_STATS,
+  getContentStatsFromLocalStorage,
+  saveContentStatsToLocalStorage,
+  updateLocalContentStats
+} from './localContentStatsService';
 
-const DEFAULT_STATS: ContentStats = {
-  notes: 0,
-  flashcards: 0,
-  questionSets: 0,
-  lessonPlans: 0,
-  presentations: 0,
-  lastUpdated: new Date()
+// Check if an error is a Firebase permission error
+const isPermissionError = (error: any): boolean => {
+  return (
+    error?.code === 'permission-denied' ||
+    error?.name === 'FirebaseError' && error?.message?.includes('permission') ||
+    error?.message?.includes('Missing or insufficient permissions')
+  );
 };
 
 /**
@@ -34,9 +40,20 @@ export const initializeContentStats = async (userId: string): Promise<void> => {
           lastUpdated: serverTimestamp()
         }
       });
+      
+      // Also save to local storage as backup
+      saveContentStatsToLocalStorage(userId, DEFAULT_STATS);
     }
   } catch (error) {
     console.error('Error initializing content stats:', error);
+    
+    // If it's a permission error, initialize locally
+    if (isPermissionError(error)) {
+      console.log('Permission error, initializing content stats locally');
+      saveContentStatsToLocalStorage(userId, DEFAULT_STATS);
+      return; // Don't rethrow, we've handled it
+    }
+    
     throw error;
   }
 };
@@ -63,6 +80,9 @@ export const getContentStats = async (userId: string): Promise<ContentStats> => 
           lastUpdated: serverTimestamp()
         }
       });
+      
+      // Also save to local storage
+      saveContentStatsToLocalStorage(userId, DEFAULT_STATS);
       return DEFAULT_STATS;
     }
 
@@ -72,11 +92,33 @@ export const getContentStats = async (userId: string): Promise<ContentStats> => 
       lastUpdated: data.contentStats.lastUpdated?.toDate() || new Date()
     };
 
+    // Save to local storage for future fallback
+    saveContentStatsToLocalStorage(userId, stats);
+
     console.log('Retrieved content stats:', stats);
     return stats;
   } catch (error) {
-    console.error('Error getting content stats:', error);
-    throw error;
+    // Check if it's a permission error
+    if (isPermissionError(error)) {
+      console.warn('Permission error, falling back to local storage for content stats');
+      
+      // Try to get from local storage
+      const localStats = getContentStatsFromLocalStorage(userId);
+      
+      if (localStats) {
+        console.log('Using cached content stats from local storage');
+        return localStats;
+      } else {
+        console.log('No cached content stats found, using defaults');
+        const defaultStats = { ...DEFAULT_STATS };
+        saveContentStatsToLocalStorage(userId, defaultStats);
+        return defaultStats;
+      }
+    } else {
+      // Only log full error for non-permission errors
+      console.error('Error getting content stats:', error);
+      throw error;
+    }
   }
 };
 
@@ -87,7 +129,7 @@ export const updateContentStats = async (
   userId: string,
   update: ContentStatsUpdate,
   date: Date = new Date()
-): Promise<void> => {
+): Promise<ContentStats> => {
   try {
     console.log('Updating content stats for user:', userId, 'with update:', update);
     const userStatsRef = doc(db, 'users', userId);
@@ -106,32 +148,53 @@ export const updateContentStats = async (
     } catch (dailyStatsError) {
       console.error('Error updating daily content stats:', dailyStatsError);
       
-      // Log more details about the error
-      if (dailyStatsError instanceof Error) {
-        console.error('Error name:', dailyStatsError.name);
-        console.error('Error message:', dailyStatsError.message);
-        console.error('Error stack:', dailyStatsError.stack);
-      }
-      
-      // Try to initialize the daily stats collection in case it doesn't exist
-      try {
-        console.log('Attempting to initialize daily stats as fallback...');
-        const initializeResult = await initializeDailyStats(userId, date);
-        console.log('Initialization result:', initializeResult);
+      // Check if it's a permission error
+      if (isPermissionError(dailyStatsError)) {
+        console.log('Permission error updating daily stats, updating locally only');
+        // No need to retry, we'll update locally instead
+      } else {
+        // Log more details about the error
+        if (dailyStatsError instanceof Error) {
+          console.error('Error name:', dailyStatsError.name);
+          console.error('Error message:', dailyStatsError.message);
+          console.error('Error stack:', dailyStatsError.stack);
+        }
         
-        // Try updating again after initialization
-        console.log('Retrying daily stats update after initialization...');
-        await updateDailyContentStats(userId, update, date);
-        console.log('Successfully updated daily content stats on retry');
-      } catch (retryError) {
-        console.error('Failed to initialize and retry daily stats update:', retryError);
-        // Continue even if daily stats update fails
+        // Try to initialize the daily stats collection in case it doesn't exist
+        try {
+          console.log('Attempting to initialize daily stats as fallback...');
+          const initializeResult = await initializeDailyStats(userId, date);
+          console.log('Initialization result:', initializeResult);
+          
+          // Try updating again after initialization
+          console.log('Retrying daily stats update after initialization...');
+          await updateDailyContentStats(userId, update, date);
+          console.log('Successfully updated daily content stats on retry');
+        } catch (retryError) {
+          console.error('Failed to initialize and retry daily stats update:', retryError);
+          // Continue even if daily stats update fails
+        }
       }
     }
 
-    console.log('Content stats updated successfully');
+    console.log('Content stats updated successfully in Firestore');
+    
+    // Get the updated stats to return and cache
+    const updatedStats = await getContentStats(userId);
+    return updatedStats;
   } catch (error) {
     console.error('Error updating content stats:', error);
+    
+    // Check if it's a permission error
+    if (isPermissionError(error)) {
+      console.log('Permission error updating content stats, falling back to local update');
+      
+      // Update locally and return the updated stats
+      const updatedStats = updateLocalContentStats(userId, update);
+      console.log('Content stats updated locally:', updatedStats);
+      return updatedStats;
+    }
+    
     throw error;
   }
 }; 

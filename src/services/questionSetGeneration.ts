@@ -258,21 +258,39 @@ export const getUserQuestionSets = async (userId: string): Promise<QuestionSet[]
       // Convert Firestore timestamps to Date objects, handling different formats
       let createdAt: Date;
       if (data.createdAt) {
-        if (typeof data.createdAt.toDate === 'function') {
-          // It's a Firestore timestamp
-          createdAt = data.createdAt.toDate();
-        } else if (data.createdAt instanceof Date) {
-          // It's already a Date object
-          createdAt = data.createdAt;
-        } else if (typeof data.createdAt === 'string') {
-          // It's a string date
-          createdAt = new Date(data.createdAt);
-        } else if (typeof data.createdAt === 'number') {
-          // It's a timestamp in milliseconds
-          createdAt = new Date(data.createdAt);
-        } else {
-          // Fallback to current date
-          console.warn('Unknown createdAt format:', data.createdAt);
+        try {
+          if (typeof data.createdAt === 'object' && data.createdAt !== null) {
+            if (typeof data.createdAt.toDate === 'function') {
+              // It's a Firestore timestamp
+              createdAt = data.createdAt.toDate();
+            } else if (data.createdAt instanceof Date) {
+              // It's already a Date object
+              createdAt = data.createdAt;
+            } else if (data.createdAt.seconds && data.createdAt.nanoseconds) {
+              // It's a Firestore timestamp in object form
+              createdAt = new Date(data.createdAt.seconds * 1000 + data.createdAt.nanoseconds / 1000000);
+            } else if (data.createdAt._methodName === 'serverTimestamp') {
+              // It's a server timestamp that hasn't been committed yet
+              console.log('Found serverTimestamp, using current date');
+              createdAt = new Date();
+            } else {
+              // Unknown object format, fall back to current date
+              console.warn('Unknown object createdAt format:', data.createdAt);
+              createdAt = new Date();
+            }
+          } else if (typeof data.createdAt === 'string') {
+            // It's a string date
+            createdAt = new Date(data.createdAt);
+          } else if (typeof data.createdAt === 'number') {
+            // It's a timestamp in milliseconds
+            createdAt = new Date(data.createdAt);
+          } else {
+            // Fallback to current date
+            console.warn('Unknown createdAt format:', data.createdAt);
+            createdAt = new Date();
+          }
+        } catch (error) {
+          console.error('Error parsing createdAt timestamp:', error);
           createdAt = new Date();
         }
       } else {

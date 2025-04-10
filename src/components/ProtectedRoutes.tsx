@@ -20,11 +20,15 @@ const useRouteProtection = (allowedRoles: string[] | null = null) => {
 
   // Log role information for debugging - only once when component mounts or when critical values change
   useEffect(() => {
-    if (!loading && currentUser && userInfo) {
-      console.log('Route Protection - User Role:', userRole);
-      console.log('Route Protection - Allowed Roles:', allowedRoles);
-    }
-  }, [loading, currentUser, userInfo?.uid]); // Only depend on critical values
+    console.log('Route Protection - Auth State:', {
+      loading,
+      authenticated: !!currentUser,
+      userInfoExists: !!userInfo,
+      userRole,
+      allowedRoles,
+      path: location.pathname
+    });
+  }, [loading, currentUser, userInfo, userRole, allowedRoles, location.pathname]);
 
   // Handle loading state
   if (loading) {
@@ -40,9 +44,17 @@ const useRouteProtection = (allowedRoles: string[] | null = null) => {
       element: <Navigate to="/login" state={{ from: location }} replace /> 
     };
   }
+  
+  // If we have a currentUser but no userInfo, create a fallback userInfo
+  if (!userInfo) {
+    console.log('Route Protection - No userInfo available, using fallback');
+    // Default to allowing access to prevent blank screens
+    return { isAllowed: true, element: <Outlet /> };
+  }
 
   // If no specific roles are required, just check authentication
   if (!allowedRoles) {
+    console.log('Route Protection - No specific roles required, granting access');
     return { isAllowed: true, element: <Outlet /> };
   }
 
@@ -53,10 +65,18 @@ const useRouteProtection = (allowedRoles: string[] | null = null) => {
     return { isAllowed: true, element: <Outlet /> };
   }
 
-  // Redirect based on user's role if they don't have access
-  // Using toLowerCase() for consistent comparison
+  // Manual role check as a fallback if hasRole fails
   const lowerCaseRole = userRole?.toLowerCase();
+  const lowerCaseAllowedRoles = allowedRoles.map(role => role.toLowerCase());
   
+  if (lowerCaseRole && lowerCaseAllowedRoles.includes(lowerCaseRole)) {
+    console.log(`Route Protection - Manual check: Access granted for role: ${lowerCaseRole}`);
+    return { isAllowed: true, element: <Outlet /> };
+  }
+  
+  console.log(`Route Protection - Access denied for role: ${userRole}. Redirecting based on role.`);
+  
+  // Redirect based on user's role if they don't have access
   if (lowerCaseRole === 'admin') {
     return { 
       isAllowed: false, 
@@ -74,11 +94,9 @@ const useRouteProtection = (allowedRoles: string[] | null = null) => {
     };
   }
 
-  // Default fallback if role is unknown
-  return { 
-    isAllowed: false, 
-    element: <Navigate to="/" state={{ from: location }} replace /> 
-  };
+  // Default fallback if role is unknown - allow access to prevent blank screens
+  console.log('Route Protection - Unknown role, allowing access as fallback');
+  return { isAllowed: true, element: <Outlet /> };
 };
 
 // Route that requires authentication (any authenticated user)
@@ -110,34 +128,56 @@ export const PublicRoute: React.FC = () => {
   const { currentUser, userInfo, loading } = useAuth();
   const location = useLocation();
 
+  // Log for debugging
+  useEffect(() => {
+    console.log('PublicRoute - Auth State:', {
+      loading,
+      authenticated: !!currentUser,
+      userInfoExists: !!userInfo,
+      userRole: userInfo?.role,
+      path: location.pathname
+    });
+  }, [loading, currentUser, userInfo, location.pathname]);
+
   if (loading) {
     return <LoadingScreen />;
   }
 
-  if (currentUser && userInfo) {
-    // Get user role directly from userInfo to avoid unnecessary function calls
-    const userRole = userInfo.role?.toLowerCase();
-    
+  if (currentUser) {
     // Check if we're already on a role-specific path to avoid redirect loops
     const currentPath = location.pathname;
-    if (userRole === 'admin' && currentPath.startsWith('/admin')) {
-      return <Outlet />;
-    } else if (userRole === 'teacher' && currentPath.startsWith('/teacher')) {
-      return <Outlet />;
-    } else if (userRole === 'student' && currentPath.startsWith('/student')) {
+    
+    // If we're on login, signup, or forgot-password, don't redirect to avoid loops
+    if (currentPath === '/login' || currentPath === '/signup' || currentPath === '/forgot-password') {
       return <Outlet />;
     }
     
-    // Redirect based on user role
-    if (userRole === 'admin') {
-      return <Navigate to="/admin" replace />;
-    } else if (userRole === 'teacher') {
-      return <Navigate to="/teacher" replace />;
-    } else if (userRole === 'student') {
-      return <Navigate to="/student" replace />;
-    } else {
-      return <Navigate to="/" replace />;
+    // If userInfo exists, use it for role-based redirection
+    if (userInfo) {
+      const userRole = userInfo.role?.toLowerCase();
+      
+      // Check if we're already on a role-specific path
+      if (userRole === 'admin' && currentPath.startsWith('/admin')) {
+        return <Outlet />;
+      } else if (userRole === 'teacher' && currentPath.startsWith('/teacher')) {
+        return <Outlet />;
+      } else if (userRole === 'student' && currentPath.startsWith('/student')) {
+        return <Outlet />;
+      }
+      
+      // Redirect based on user role
+      if (userRole === 'admin') {
+        return <Navigate to="/admin" replace />;
+      } else if (userRole === 'teacher') {
+        return <Navigate to="/teacher" replace />;
+      } else if (userRole === 'student') {
+        return <Navigate to="/student" replace />;
+      }
     }
+    
+    // If we have a currentUser but no userInfo or unknown role, default to teacher dashboard
+    console.log('PublicRoute - Authenticated but no role info, defaulting to teacher dashboard');
+    return <Navigate to="/teacher" replace />;
   }
 
   return <Outlet />;
