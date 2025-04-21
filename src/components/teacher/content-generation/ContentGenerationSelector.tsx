@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { BookOpen, GraduationCap, Layers, PenTool, FileText, Brain, Presentation, Slash as FlashCard } from 'lucide-react';
+import { BookOpen, GraduationCap, Layers, PenTool, FileText, Brain, Presentation } from 'lucide-react';
+import { AVAILABLE_CLASSES, AVAILABLE_SUBJECTS } from '../../../types/resource';
 
 interface ContentType {
   id: string;
@@ -47,12 +48,14 @@ const contentTypes: ContentType[] = [
   },
 ];
 
-const classes = ['Class 10', 'Class 11', 'Class 12'];
-const subjects = {
-  'Class 10': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-  'Class 11': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-  'Class 12': ['Mathematics', 'Physics', 'Chemistry', 'Biology'],
-};
+// Create class options from AVAILABLE_CLASSES
+const classes = AVAILABLE_CLASSES.map(cls => `Class ${cls}`);
+
+// Create subjects mapping for each class
+const subjects: Record<string, string[]> = {};
+classes.forEach(cls => {
+  subjects[cls] = AVAILABLE_SUBJECTS as unknown as string[];
+});
 const chapters = {
   Mathematics: ['Algebra', 'Geometry', 'Calculus'],
   Physics: ['Mechanics', 'Thermodynamics', 'Optics'],

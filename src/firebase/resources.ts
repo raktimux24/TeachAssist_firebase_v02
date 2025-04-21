@@ -251,8 +251,15 @@ export const fetchClasses = async (): Promise<string[]> => {
     });
     
     const classes = Array.from(classesSet).sort((a, b) => {
-      // Sort numerically
-      return parseInt(a) - parseInt(b);
+      // Handle both numeric and Roman numeral classes
+      // Convert Roman numerals to numbers for comparison
+      const romanToNum = (roman: string) => {
+        if (roman === '7' || roman.toUpperCase() === 'VII') return 7;
+        if (roman === '8' || roman.toUpperCase() === 'VIII') return 8;
+        return parseInt(roman);
+      };
+      
+      return romanToNum(a) - romanToNum(b);
     });
     
     console.log('fetchClasses: Found classes:', classes);

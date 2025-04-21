@@ -54,3 +54,45 @@ img {
   max-width: 100%;
   height: auto;
 }
+
+/* Fraction styles */
+.fraction {
+  font-family: 'Literata', serif;
+  font-variant-numeric: diagonal-fractions; /* Enable OpenType fraction feature */
+}
+
+/* Fallback for browsers that don't support font-variant-numeric */
+.fraction-fallback {
+  display: inline-flex;
+  flex-direction: column;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.fraction-fallback .numerator,
+.fraction-fallback .denominator {
+  font-size: 0.7em;
+}
+
+.fraction-fallback .fraction-line {
+  border-bottom: 1px solid currentColor;
+  margin: 0 0.05em;
+}
+
+/* Common fractions with Unicode characters */
+.frac-1-2::before { content: "½"; }
+.frac-1-3::before { content: "⅓"; }
+.frac-2-3::before { content: "⅔"; }
+.frac-1-4::before { content: "¼"; }
+.frac-3-4::before { content: "¾"; }
+.frac-1-5::before { content: "⅕"; }
+.frac-2-5::before { content: "⅖"; }
+.frac-3-5::before { content: "⅗"; }
+.frac-4-5::before { content: "⅘"; }
+.frac-1-6::before { content: "⅙"; }
+.frac-5-6::before { content: "⅚"; }
+.frac-1-8::before { content: "⅛"; }
+.frac-3-8::before { content: "⅜"; }
+.frac-5-8::before { content: "⅝"; }
+.frac-7-8::before { content: "⅞"; }

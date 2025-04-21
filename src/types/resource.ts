@@ -51,7 +51,7 @@ export interface Chapter {
 }
 
 // Available options for the resource library
-export const AVAILABLE_CLASSES = ['9', '10', '11', '12'] as const;
+export const AVAILABLE_CLASSES = ['7', '8', '9', '10', '11', '12'] as const;
 export const AVAILABLE_SUBJECTS = [
   'Mathematics',
   'Physics',
@@ -70,5 +70,6 @@ export const AVAILABLE_SUBJECTS = [
   'Geography',
   'Accountancy',
   'Informatics Practices',
-  'Science'
+  'Science',
+  'Civics'
 ] as const; 

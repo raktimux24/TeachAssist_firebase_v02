@@ -10,6 +10,10 @@ export default {
           700: '#0044CC',
         },
       },
+      fontFamily: {
+        'literata': ['Literata', 'serif'],
+        'fraction': ['Literata', 'serif'],
+      },
     },
   },
   darkMode: 'class',
