@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import DailyStatsDebugger from './components/debug/DailyStatsDebugger';
 import { AdminRoute, TeacherRoute, StudentRoute, PublicRoute } from './components/ProtectedRoutes';
 import { useAuth } from './contexts/AuthContext';
+import { initGA, useGoogleAnalytics } from './hooks/useGoogleAnalytics';
+import { Home, LayoutGrid, Info, Contact } from 'lucide-react';
 import { FlashcardsProvider } from './context/FlashcardsContext';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -69,15 +71,42 @@ const RoleBasedRedirect = () => {
   return <Navigate to="/" replace />;
 };
 
-const LandingPage = ({ isDarkMode, onThemeToggle }: { isDarkMode: boolean; onThemeToggle: () => void }) => (
-  <>
-    <Header isDarkMode={isDarkMode} onThemeToggle={onThemeToggle} />
-    <Hero />
-    <Features />
-    <CTASection />
-    <Footer />
-  </>
-);
+const LandingPage = ({ isDarkMode, onThemeToggle }: { isDarkMode: boolean; onThemeToggle: () => void }) => {
+  // Default footer props
+  const footerProps = {
+    brand: {
+      name: "TeachAssist Pro",
+      description: "Empowering educators and students with AI-powered learning solutions."
+    },
+    socialLinks: [
+      { name: "Facebook", href: "#" },
+      { name: "Twitter", href: "#" },
+      { name: "Instagram", href: "#" },
+      { name: "LinkedIn", href: "#" }
+    ],
+    columns: [
+      {
+        title: "Navigation",
+        links: [
+          { name: "Home", Icon: Home, href: "/" },
+          { name: "Features", Icon: LayoutGrid, href: "#features" },
+          { name: "About", Icon: Info, href: "#about" },
+          { name: "Contact", Icon: Contact, href: "#contact" }
+        ]
+      }
+    ]
+  };
+
+  return (
+    <>
+      <Header isDarkMode={isDarkMode} onThemeToggle={onThemeToggle} />
+      <Hero />
+      <Features />
+      <CTASection />
+      <Footer {...footerProps} />
+    </>
+  );
+};
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -133,7 +162,6 @@ function App() {
   };
 
   return (
-    <Router>
       <div className="min-h-screen bg-white dark:bg-gray-900 overflow-x-hidden max-w-[100vw]">
         <Routes>
           {/* Public Routes - accessible without authentication */}
@@ -229,14 +257,27 @@ function App() {
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
       </div>
-    </Router>
   );
 }
 
+// Google Analytics tracker component
+function GoogleAnalyticsTracker() {
+  useGoogleAnalytics();
+  return null;
+}
+
 export default function AppWithProviders() {
+  // Initialize Google Analytics
+  useEffect(() => {
+    initGA();
+  }, []);
+
   return (
     <FlashcardsProvider>
-      <App />
+      <Router>
+        <GoogleAnalyticsTracker />
+        <App />
+      </Router>
     </FlashcardsProvider>
   );
 }
