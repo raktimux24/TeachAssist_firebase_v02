@@ -44,7 +44,7 @@ interface FooterProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const defaultBrand = {
   name: "TeachAssist Pro",
-  description: "Empowering educators and students with AI-powered learning solutions."
+  description: "Empowering CBSE educators with AI-powered teaching tools designed specifically for classes 7-12."
 };
 
 const defaultSocialLinks: SocialLink[] = [
@@ -58,10 +58,21 @@ const defaultColumns: FooterColumn[] = [
   {
     title: "Quick Links",
     links: [
-      { name: "Home", Icon: Home, href: "#" },
+      { name: "Home", Icon: Home, href: "#hero" },
       { name: "Features", Icon: LayoutGrid, href: "#features" },
-      { name: "About", Icon: Info, href: "#about" },
-      { name: "Contact", Icon: Contact, href: "#contact" }
+      { name: "How It Works", Icon: Info, href: "#how-it-works" },
+      { name: "Testimonials", Icon: FileText, href: "#testimonials" },
+      { name: "Pricing", Icon: FileText, href: "#pricing" },
+      { name: "FAQ", Icon: FileText, href: "#faq" }
+    ]
+  },
+  {
+    title: "Resources",
+    links: [
+      { name: "CBSE Curriculum", Icon: FileText, href: "#" },
+      { name: "Teacher Resources", Icon: FileText, href: "#" },
+      { name: "Blog", Icon: FileText, href: "#" },
+      { name: "Support", Icon: Contact, href: "#contact" }
     ]
   },
   {
@@ -116,7 +127,7 @@ const Footer = React.forwardRef<HTMLDivElement, FooterProps>(
               </p>
             </div>
 
-            <div className="grid grid-cols-2 mt-16 md:grid-cols-2 lg:col-span-8 lg:justify-items-end lg:mt-0">
+            <div className="grid grid-cols-2 mt-16 md:grid-cols-3 lg:col-span-8 lg:justify-items-end lg:mt-0">
               {columns.map(({ title, links }) => (
                 <div key={title} className="last:mt-12 md:last:mt-0">
                   <h3 className="text-sm font-semibold text-white">{title}</h3>

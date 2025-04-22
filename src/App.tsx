@@ -4,13 +4,9 @@ import DailyStatsDebugger from './components/debug/DailyStatsDebugger';
 import { AdminRoute, TeacherRoute, StudentRoute, PublicRoute } from './components/ProtectedRoutes';
 import { useAuth } from './contexts/AuthContext';
 import { initGA, useGoogleAnalytics } from './hooks/useGoogleAnalytics';
-import { Home, LayoutGrid, Info, Contact } from 'lucide-react';
 import { FlashcardsProvider } from './context/FlashcardsContext';
 import Header from './components/Header';
-import Hero from './components/Hero';
-import Features from './components/Features';
-import { CTASection } from './components/CTASection';
-import Footer from './components/Footer';
+import LandingPage from './pages/landing/LandingPage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
@@ -71,39 +67,11 @@ const RoleBasedRedirect = () => {
   return <Navigate to="/" replace />;
 };
 
-const LandingPage = ({ isDarkMode, onThemeToggle }: { isDarkMode: boolean; onThemeToggle: () => void }) => {
-  // Default footer props
-  const footerProps = {
-    brand: {
-      name: "TeachAssist Pro",
-      description: "Empowering educators and students with AI-powered learning solutions."
-    },
-    socialLinks: [
-      { name: "Facebook", href: "#" },
-      { name: "Twitter", href: "#" },
-      { name: "Instagram", href: "#" },
-      { name: "LinkedIn", href: "#" }
-    ],
-    columns: [
-      {
-        title: "Navigation",
-        links: [
-          { name: "Home", Icon: Home, href: "/" },
-          { name: "Features", Icon: LayoutGrid, href: "#features" },
-          { name: "About", Icon: Info, href: "#about" },
-          { name: "Contact", Icon: Contact, href: "#contact" }
-        ]
-      }
-    ]
-  };
-
+const LandingPageWrapper = ({ isDarkMode, onThemeToggle }: { isDarkMode: boolean; onThemeToggle: () => void }) => {
   return (
     <>
       <Header isDarkMode={isDarkMode} onThemeToggle={onThemeToggle} />
-      <Hero />
-      <Features />
-      <CTASection />
-      <Footer {...footerProps} />
+      <LandingPage />
     </>
   );
 };
@@ -169,7 +137,7 @@ function App() {
             <Route 
               path="/" 
               element={
-                <LandingPage 
+                <LandingPageWrapper 
                   isDarkMode={isDarkMode} 
                   onThemeToggle={handleThemeToggle} 
                 />

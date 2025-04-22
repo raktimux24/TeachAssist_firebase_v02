@@ -21,7 +21,7 @@
     "dotenv-cli": "^8.0.0",
     "file-saver": "^2.0.5",
     "firebase": "^11.4.0",
-    "framer-motion": "^12.5.0",
+    "framer-motion": "^12.7.4",
     "katex": "^0.16.22",
     "lucide-react": "^0.344.0",
     "pptxgenjs": "^3.12.0",
