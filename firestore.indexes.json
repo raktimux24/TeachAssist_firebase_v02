@@ -9,22 +9,6 @@
       ]
     },
     {
-      "collectionGroup": "questionSet",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "questionset",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "classnotes",
       "queryScope": "COLLECTION",
       "fields": [
@@ -50,6 +34,14 @@
     },
     {
       "collectionGroup": "flashcards",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "resources",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "userId", "order": "ASCENDING" },

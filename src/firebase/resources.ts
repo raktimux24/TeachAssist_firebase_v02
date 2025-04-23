@@ -70,16 +70,73 @@ export const updateResource = async (id: string, updates: Partial<Resource>) => 
 
 // Delete a resource and its associated file
 export const deleteResource = async (id: string, fileUrl: string) => {
+  console.log('Deleting resource with ID:', id, 'and fileUrl:', fileUrl);
+  
+  // First, let's ensure we delete the Firestore document even if the Storage file deletion fails
   try {
-    // Delete the file from Storage
-    const storageRef = ref(storage, fileUrl);
-    await deleteObject(storageRef);
-
     // Delete the document from Firestore
     await deleteDoc(doc(db, 'resources', id));
+    console.log('Firestore document deleted successfully');
+  } catch (firestoreError) {
+    console.error('Error deleting Firestore document:', firestoreError);
+    throw firestoreError; // Still throw this error since we need the Firestore deletion to succeed
+  }
+  
+  // Now try to delete the storage file, but don't fail the whole operation if this fails
+  try {
+    // Skip file deletion if no URL is provided
+    if (!fileUrl) {
+      console.log('No file URL provided, skipping storage file deletion');
+      return;
+    }
+    
+    // Extract the storage path from the full URL
+    let storagePath;
+    try {
+      // First, try to extract the path if this is a Firebase Storage URL
+      if (fileUrl.includes('firebasestorage.googleapis.com')) {
+        const urlObj = new URL(fileUrl);
+        // Get the path from the 'o' parameter (object path)
+        const pathname = urlObj.pathname;
+        const pathMatch = pathname.match(/\/o\/(.+)/);
+        
+        if (pathMatch && pathMatch[1]) {
+          // URL decode the path
+          storagePath = decodeURIComponent(pathMatch[1]);
+          console.log('Extracted storage path from URL:', storagePath);
+        } else {
+          throw new Error('Could not extract storage path from URL');
+        }
+      } else if (fileUrl.startsWith('resources/')) {
+        // If it's already a relative path, use it directly
+        storagePath = fileUrl;
+        console.log('Using provided path directly:', storagePath);
+      } else {
+        throw new Error('Unrecognized file URL format');
+      }
+    } catch (pathError) {
+      console.error('Error extracting storage path:', pathError);
+      // As a fallback, try to use the fileUrl directly
+      storagePath = fileUrl;
+      console.log('Using fileUrl directly as fallback:', storagePath);
+    }
+    
+    // Delete the file from Storage
+    const storageRef = ref(storage, storagePath);
+    console.log('Attempting to delete file at path:', storagePath);
+    await deleteObject(storageRef);
+    console.log('File deleted successfully');
   } catch (error) {
-    console.error('Error deleting resource:', error);
-    throw error;
+    // Log the error but don't throw it - we still want to consider the operation successful
+    // if the Firestore document was deleted
+    console.warn('Error deleting storage file (continuing anyway):', error);
+    
+    // TypeScript-safe way to check for Firebase Storage errors
+    const storageError = error as { code?: string };
+    // If this is just a 'file not found' error, it's not a critical failure
+    if (storageError.code === 'storage/object-not-found') {
+      console.log('File was already deleted or never existed - this is fine');
+    }
   }
 };
 
