@@ -301,123 +301,356 @@ Please make sure the notes are accurate, comprehensive, and follow educational b
 Remember to format your response as a valid JSON object with the structure I specified.`;
 };
 
+// Import the JSON parser utility
+import { parseJsonResponse } from '../utils/jsonParser';
+
 /**
- * Parses the OpenAI API response into a NotesSet
+ * Parses the API response into a NotesSet
  */
 const parseOpenAIResponse = (content: string, options: NotesGenerationOptions): NotesSet => {
   try {
-    // Try to parse the JSON response
-    let parsedContent: NotesSet | null = null;
+    console.log('Raw OpenAI response:', content);
     
-    // First try direct JSON parsing
-    try {
-      parsedContent = JSON.parse(content);
-      console.log('Successfully parsed JSON directly');
-    } catch (directParseError) {
-      console.error('Direct JSON parsing failed:', directParseError);
-      
-      // Try to extract JSON from the response using regex
+    // Check if response is truncated (common with Gemini API)
+    const isTruncated = content.includes('"content":') && 
+      (content.endsWith('"') || content.endsWith('\n') || 
+       !content.endsWith('}') || content.includes('Introductio'));
+       
+    if (isTruncated) {
+      console.log('Detected truncated response, attempting to repair JSON');
+      return createValidNotesSet(handleTruncatedResponse(content), options);
+    }
+    
+    // First, try to clean up common escape character issues
+    let cleanedContent = content;
+    
+    // Fix bad escaped characters (handles backslashes followed by invalid escape chars)
+    cleanedContent = cleanedContent.replace(/([^\\])\\([^"\\nrtbfux\/])/g, '$1\\\\$2');
+    
+    // Try to parse cleaned content
+    if (cleanedContent.startsWith('{') && cleanedContent.endsWith('}')) {
       try {
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const jsonContent = jsonMatch[0];
-          parsedContent = JSON.parse(jsonContent);
-          console.log('Successfully parsed JSON using regex extraction');
-        } else {
-          console.error('No JSON object found in the response');
+        const directParsed = JSON.parse(cleanedContent);
+        
+        // If we have a valid structure with notes array, use it
+        if (directParsed && 
+            typeof directParsed === 'object' && 
+            directParsed.title && 
+            (directParsed.notes || directParsed.content)) {
           
-          // If no JSON found, create a simple structure with the raw content
-          console.log('Creating fallback structure from raw content');
-          parsedContent = {
-            id: uuidv4(),
-            title: `${options.subject} - ${options.chapters.join(', ')} Notes`,
-            subject: options.subject,
-            class: options.class,
-            book: options.book,
-            chapters: options.chapters,
-            type: options.noteType,
-            layout: options.layout,
-            notes: [{
+          // Handle case where we have content but no notes array
+          if (directParsed.content && !directParsed.notes) {
+            directParsed.notes = [{
               id: '1',
               title: 'Generated Content',
-              content: content.replace(/```/g, '').trim()
-            }],
-            createdAt: new Date()
-          };
+              content: directParsed.content
+            }];
+          }
+          
+          return createValidNotesSet(directParsed, options);
         }
-      } catch (regexParseError) {
-        console.error('Regex JSON parsing failed:', regexParseError);
+      } catch (preProcessedError) {
+        console.warn('Direct JSON parsing failed:', preProcessedError);
+        
+        // Try to identify the problematic position in the JSON
+        if (preProcessedError instanceof SyntaxError && preProcessedError.message.includes('position')) {
+          const posMatch = preProcessedError.message.match(/position (\d+)/);
+          if (posMatch && posMatch[1]) {
+            const errorPos = parseInt(posMatch[1]);
+            console.log(`Attempting to fix JSON error at position ${errorPos}`);
+            
+            // Look at the problematic area
+            const start = Math.max(0, errorPos - 20);
+            const end = Math.min(cleanedContent.length, errorPos + 20);
+            const problemArea = cleanedContent.substring(start, end);
+            console.log(`Problem area: ${problemArea}`);
+            
+            // Try to fix the issue at the error position
+            const problemChar = cleanedContent.charAt(errorPos);
+            if (problemChar === '\\') {
+              // Likely a bad escape sequence - fix by doubling the backslash
+              const fixedContent = cleanedContent.substring(0, errorPos) + '\\\\' + cleanedContent.substring(errorPos + 1);
+              try {
+                const fixed = JSON.parse(fixedContent);
+                if (fixed) {
+                  console.log('Successfully fixed JSON by handling escape sequence');
+                  return createValidNotesSet(fixed, options);
+                }
+              } catch (fixError) {
+                console.warn('Could not fix JSON with escape handling:', fixError);
+              }
+            }
+          }
+        }
       }
     }
     
-    // If we successfully parsed the content, validate and return it
+    // Try to parse using our robust JSON parser utility
+    const parsedContent = parseJsonResponse<any>(content);
+    
     if (parsedContent) {
-      // Ensure all required fields are present
-      if (!parsedContent.title) {
-        parsedContent.title = `${options.subject} - ${options.chapters.join(', ')} Notes`;
+      console.log('Successfully parsed response using JSON parser utility');
+      
+      // Handle case where we have content but no notes array
+      if (parsedContent.content && !parsedContent.notes) {
+        parsedContent.notes = [{
+          id: '1',
+          title: 'Generated Content',
+          content: parsedContent.content
+        }];
       }
       
-      if (!parsedContent.subject) {
-        parsedContent.subject = options.subject;
-      }
-      
-      if (!parsedContent.class) {
-        parsedContent.class = options.class;
-      }
-      
-      if (!parsedContent.book && options.book) {
-        parsedContent.book = options.book;
-      }
-      
-      if (!parsedContent.chapters || !Array.isArray(parsedContent.chapters)) {
-        parsedContent.chapters = options.chapters;
-      }
-      
-      if (!parsedContent.type) {
-        parsedContent.type = options.noteType;
-      }
-      
-      if (!parsedContent.layout) {
-        parsedContent.layout = options.layout;
-      }
-      
-      // Ensure notes array exists and has valid structure
-      if (!parsedContent.notes || !Array.isArray(parsedContent.notes) || parsedContent.notes.length === 0) {
-        console.warn('Notes array is empty or invalid, creating default notes');
-        parsedContent.notes = createDefaultNotes(options);
-      } else {
-        // Validate each note and fix any issues
-        parsedContent.notes = parsedContent.notes.map((note, index) => {
-          if (!note.id) {
-            note.id = (index + 1).toString();
-          }
-          
-          if (!note.title) {
-            note.title = `Section ${index + 1}`;
-          }
-          
-          if (!note.content) {
-            note.content = 'No content available for this section.';
-          }
-          
-          return note;
-        });
-      }
-      
-      // Add creation timestamp
-      parsedContent.createdAt = new Date();
-      
-      return parsedContent;
+      return createValidNotesSet(parsedContent, options);
     }
     
-    // If parsing fails, create default notes
-    console.warn('Failed to parse OpenAI response, creating default notes');
-    return createDefaultNotesSet(options);
+    // If all parsing attempts fail, extract sections using markdown patterns
+    console.log('Regex JSON parsing failed, creating fallback structure');
     
+    // Attempt to extract sections by markdown patterns
+    const extractedSections = extractSectionsFromContent(content);
+    if (extractedSections && extractedSections.length > 0) {
+      console.log(`Successfully extracted ${extractedSections.length} sections from content`);
+      
+      const fallbackContent = {
+        id: uuidv4(),
+        title: extractTitleFromContent(content, options),
+        subject: options.subject,
+        class: options.class,
+        book: options.book,
+        chapters: options.chapters,
+        type: options.noteType,
+        layout: options.layout,
+        notes: extractedSections,
+        createdAt: new Date()
+      };
+      
+      return createValidNotesSet(fallbackContent, options);
+    }
+    
+    // Last resort: create a basic fallback structure with cleaned content
+    console.log('All parsing attempts failed, creating default notes');
+    return createDefaultNotesSet(options);
   } catch (error) {
-    console.error('Error parsing OpenAI response:', error);
+    console.error('Error parsing API response:', error);
     return createDefaultNotesSet(options);
   }
+};
+
+/**
+ * Handle truncated responses from AI services like Gemini
+ */
+const handleTruncatedResponse = (content: string): any => {
+  // Extract existing complete notes
+  const notes: Note[] = [];
+  let title = `${new Date().toLocaleDateString()} Notes`;
+  
+  // Try to extract title
+  const titleMatch = content.match(/"title"\s*:\s*"([^"]+)"/i);
+  if (titleMatch && titleMatch[1]) {
+    title = titleMatch[1];
+  }
+  
+  // Step 1: First try to extract complete notes with JSON structure
+  const noteRegex = /"id"\s*:\s*"([^"]+)"\s*,\s*"title"\s*:\s*"([^"]+)"\s*,\s*"content"\s*:\s*"([^]*?)(?:"\s*}|"\s*,)/g;
+  let match;
+  
+  while ((match = noteRegex.exec(content)) !== null) {
+    const [_, id, noteTitle, noteContent] = match;
+    if (id && noteTitle && noteContent) {
+      // Clean content by resolving escaped characters
+      const cleanedContent = noteContent
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t')
+        .replace(/\\"/g, '"');
+        
+      notes.push({
+        id,
+        title: noteTitle.replace(/\\n/g, '\n'),
+        content: cleanedContent
+      });
+    }
+  }
+  
+  // Step 2: If we have some notes but truncation likely cut off more,
+  // extract the last incomplete note
+  if (notes.length > 0) {
+    // Find the last incomplete note if it exists
+    const lastMatch = content.match(/"id"\s*:\s*"([^"]+)"\s*,\s*"title"\s*:\s*"([^"]+)"\s*,\s*"content"\s*:\s*"([^]*)$/i);
+    if (lastMatch && lastMatch[1] && lastMatch[2] && lastMatch[3]) {
+      const [_, id, noteTitle, partialContent] = lastMatch;
+      
+      // Only add if it's not already in our notes list
+      if (!notes.some(note => note.id === id)) {
+        const cleanedContent = partialContent
+          .replace(/\\n/g, '\n')
+          .replace(/\\t/g, '\t')
+          .replace(/\\"/g, '"');
+          
+        notes.push({
+          id,
+          title: noteTitle.replace(/\\n/g, '\n'),
+          content: cleanedContent + '\n\n[Note: This section may be incomplete due to response truncation]'
+        });
+      }
+    }
+  }
+  
+  console.log(`Successfully extracted ${notes.length} notes from truncated response`);
+  
+  // Step 3: If we still have no notes, try markdown patterns
+  if (notes.length === 0) {
+    // Look for markdown headers in the content to create notes
+    const notesByHeader = extractSectionsFromContent(content);
+    if (notesByHeader.length > 0) {
+      notes.push(...notesByHeader);
+      console.log(`Extracted ${notesByHeader.length} notes based on markdown format`);
+    }
+  }
+  
+  // If we still have no valid notes, create a fallback
+  if (notes.length === 0) {
+    notes.push({
+      id: '1',
+      title: 'Generated Content',
+      content: content || 'No content available.'
+    });
+  }
+  
+  return {
+    title,
+    notes
+  };
+};
+
+/**
+ * Extract sections from content based on markdown patterns
+ */
+const extractSectionsFromContent = (content: string): Note[] => {
+  const notes: Note[] = [];
+  let noteIndex = 0;
+  
+  // Look for section headers with # or ## markdown format
+  const headerMatches = content.matchAll(/#+\s+(.+?)\s*\n([\s\S]*?)(?=\n#+\s+|$)/g);
+  const processedHeaderMatches = Array.from(headerMatches);
+  
+  if (processedHeaderMatches && processedHeaderMatches.length > 0) {
+    processedHeaderMatches.forEach((match) => {
+      if (match && match[1] && match[2]) {
+        notes.push({
+          id: (noteIndex + 1).toString(),
+          title: match[1].trim(),
+          content: match[2].trim() || 'No content available for this section.'
+        });
+        noteIndex++;
+      }
+    });
+  }
+  
+  // If we found sections with markdown headers, return them
+  if (notes.length > 0) {
+    return notes;
+  }
+  
+  // Check for bold sections (**Section Title**)
+  const boldTitlePattern = /\*\*([^\*]+)\*\*([\s\S]*?)(?=\*\*[^\*]+\*\*|$)/g;
+  const boldMatches = Array.from(content.matchAll(boldTitlePattern));
+  
+  if (boldMatches && boldMatches.length > 0) {
+    boldMatches.forEach((match) => {
+      if (match && match[1] && match[2]) {
+        notes.push({
+          id: (noteIndex + 1).toString(),
+          title: match[1].trim(),
+          content: match[2].trim() || 'No content available for this section.'
+        });
+        noteIndex++;
+      }
+    });
+  }
+  
+  return notes;
+};
+
+/**
+ * Helper function to extract a title from content
+ */
+const extractTitleFromContent = (content: string, options: NotesGenerationOptions): string => {
+  // Try to find a title in the content (common patterns in notes)
+  const titlePatterns = [
+    /^#\s+(.+?)\s*$/m,                  // Markdown h1: # Title
+    /^\s*Title:\s*(.+?)\s*$/m,          // Explicit "Title:" label
+    /^\s*Chapter\s*\d*\s*:?\s*(.+?)\s*$/m, // Chapter heading
+    /^\s*(.+?)\s*\n[=-]+\s*$/m,        // Underlined title
+    /^\s*\*\*(.+?)\*\*\s*$/m            // Bold text at start
+  ];
+  
+  for (const pattern of titlePatterns) {
+    const match = content.match(pattern);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  }
+  
+  // Default title based on options
+  return `${options.subject} - ${options.chapters.join(', ')} Notes`;
+};
+
+/**
+ * Creates a valid NotesSet from parsed content, ensuring all required fields are present
+ */
+const createValidNotesSet = (parsedContent: any, options: NotesGenerationOptions): NotesSet => {
+  // Ensure all required fields are present
+  if (!parsedContent.id) {
+    parsedContent.id = uuidv4();
+  }
+  
+  if (!parsedContent.title) {
+    parsedContent.title = `${options.subject} - ${options.chapters.join(', ')} Notes`;
+  }
+  
+  if (!parsedContent.subject) {
+    parsedContent.subject = options.subject;
+  }
+  
+  if (!parsedContent.class) {
+    parsedContent.class = options.class;
+  }
+  
+  if (!parsedContent.book && options.book) {
+    parsedContent.book = options.book;
+  }
+  
+  if (!parsedContent.chapters || !Array.isArray(parsedContent.chapters)) {
+    parsedContent.chapters = options.chapters;
+  }
+  
+  if (!parsedContent.type) {
+    parsedContent.type = options.noteType;
+  }
+  
+  if (!parsedContent.layout) {
+    parsedContent.layout = options.layout;
+  }
+  
+  // Ensure notes array exists and has valid structure
+  if (!parsedContent.notes || !Array.isArray(parsedContent.notes) || parsedContent.notes.length === 0) {
+    console.warn('Notes array is empty or invalid, creating default notes');
+    parsedContent.notes = createDefaultNotes(options);
+  } else {
+    // Validate each note and fix any issues
+    parsedContent.notes = parsedContent.notes.map((note: any, index: number) => {
+      return {
+        id: note.id || (index + 1).toString(),
+        title: note.title || `Section ${index + 1}`,
+        content: note.content || 'No content available for this section.'
+      };
+    });
+  }
+  
+  // Add creation timestamp
+  parsedContent.createdAt = new Date();
+  
+  return parsedContent as NotesSet;
 };
 
 /**
